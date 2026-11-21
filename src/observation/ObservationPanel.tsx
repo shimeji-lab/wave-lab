@@ -1,4 +1,5 @@
 import type { ObservationSample } from "../simulation/SimulationController";
+import { createWaveformPoints, waveformTimeWindowSeconds } from "./waveformPoints";
 
 interface ObservationPanelProps {
   open: boolean;
@@ -35,29 +36,11 @@ export function ObservationPanel({ open, observer, samples, onToggle }: Observat
             <line x1="0" y1="48" x2="320" y2="48" className="waveform-zero" />
             <polyline points={waveformPoints} className="waveform-line" />
           </svg>
-          <p className="measurement-note">実線は観測値です（縦軸固定: -3.0 ～ +3.0）</p>
+          <p className="measurement-note">
+            横軸は時間（左から右へ進む・横幅いっぱいで {waveformTimeWindowSeconds}）。縦軸は固定: -3.0 ～ +3.0
+          </p>
         </div>
       )}
     </aside>
   );
-}
-
-function createWaveformPoints(samples: ObservationSample[]): string {
-  if (samples.length === 0) {
-    return "";
-  }
-
-  const fixedAmplitudeScale = 3;
-
-  return samples
-    .map((sample, index) => {
-      const x = samples.length === 1 ? 0 : (index / (samples.length - 1)) * 320;
-      const normalizedDisplacement = Math.max(
-        -1,
-        Math.min(1, sample.displacement / fixedAmplitudeScale),
-      );
-      const y = 48 - normalizedDisplacement * 42;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
 }
