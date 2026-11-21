@@ -14,6 +14,7 @@ export type WorkerCommand =
   | { version: typeof workerProtocolVersion; type: "SET_CONTINUOUS_SOURCES"; sources: ContinuousSourceConfig[] }
   | { version: typeof workerProtocolVersion; type: "SET_SPEED"; multiplier: 0.25 | 0.5 | 1 | 2 }
   | { version: typeof workerProtocolVersion; type: "SET_OBSERVER"; column: number; row: number }
+  | { version: typeof workerProtocolVersion; type: "CLEAR_OBSERVER" }
   | { version: typeof workerProtocolVersion; type: "SET_BOUNDARIES"; cells: BoundaryCell[] }
   | {
       version: typeof workerProtocolVersion;

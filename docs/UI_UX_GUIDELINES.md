@@ -52,20 +52,36 @@ The active mode must remain clearly visible.
 
 After applying a two-source preset, the field is selection-only: tapping an
 existing source opens its settings, while tapping empty space does not create a
-third source. Source creation remains available through **配置 → 波源**.
+third source. Source creation remains available through **＋ 追加する** in the
+context bar or by choosing the **波源** tool again.
 
-Mode hints appear when a mode changes and fade after four seconds. Observation
-controls are not shown until an observation point exists.
+The tool dock has three rows (since 0.1.0-prototype.14):
+
+1. Context bar: a persistent one-line hint for the active tool plus only the
+   controls that tool needs (slit width, continuous-wave toggle, clear walls,
+   observation graph toggle). The hint briefly flashes when a tap is ignored.
+2. Tool row: six icon + label tools (波を起こす, 波源, 観測点, 壁, スリット,
+   壁を消す). The active tool is highlighted.
+3. Action row: 実験 (gallery), 戻す (undo), 再生/一時停止, 速さ, その他
+   (single step, monochrome, diagnostics, full reset).
+
+戻す (undo, also Ctrl+Z) restores the previous placement of walls, sources and
+the observation point. It does not rewind the wave field itself. Consecutive
+slider changes on one source count as one undo step.
+
+Panels (observation results, source settings) sit between the field and the
+tool dock. They never cover the field; the field shrinks to fit instead.
+Escape closes open panels and menus.
 
 ## 4. Portrait layout
 
 ```text
 Top bar
 Simulation field
-Floating context controls
-Playback controls
-Tool rail
-Observation-sheet handle
+Observation / source-settings sheet (optional)
+Context bar
+Tool row
+Action row
 ```
 
 ## 5. Landscape layout

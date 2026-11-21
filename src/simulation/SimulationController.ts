@@ -80,6 +80,10 @@ export class SimulationController {
     this.send({ version: workerProtocolVersion, type: "SET_OBSERVER", column, row });
   }
 
+  public clearObserver(): void {
+    this.send({ version: workerProtocolVersion, type: "CLEAR_OBSERVER" });
+  }
+
   public setBoundaries(cells: BoundaryCell[]): void {
     this.send({ version: workerProtocolVersion, type: "SET_BOUNDARIES", cells });
   }

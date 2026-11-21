@@ -4,6 +4,7 @@ import { SafeRangeInput } from "./SafeRangeInput";
 
 interface SourceSettingsPanelProps {
   source: ContinuousSourceConfig;
+  label: string;
   columns: number;
   rows: number;
   visibleInsetCells: number;
@@ -15,6 +16,7 @@ interface SourceSettingsPanelProps {
 
 export function SourceSettingsPanel({
   source,
+  label,
   columns,
   rows,
   visibleInsetCells,
@@ -35,8 +37,8 @@ export function SourceSettingsPanel({
     <aside className="source-settings-panel" aria-label="連続波源の設定">
       <header>
         <div>
-          <strong>連続波源の設定</strong>
-          <span>{source.id}</span>
+          <strong>{label} の設定</strong>
+          <span>スライダーを動かすと、すぐ波に反映される</span>
         </div>
         <button type="button" onClick={onClose}>閉じる</button>
       </header>

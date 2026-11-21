@@ -115,6 +115,9 @@ function handleCommand(command: WorkerCommand): void {
       };
       emitObservationSample();
       return;
+    case "CLEAR_OBSERVER":
+      observer = undefined;
+      return;
     case "SET_BOUNDARIES":
       setFixedBoundaryCells(requireState(), requireConfig(), command.cells);
       emitFrame();
