@@ -7,6 +7,7 @@ import {
 } from "../experiments/presets";
 import { CrossSectionPanel } from "../observation/CrossSectionPanel";
 import { DopplerPanel } from "../observation/DopplerPanel";
+import { defaultGraphScale, nextGraphScale, type GraphScale } from "../observation/graphScale";
 import type { MovingSourceConfig } from "../physics/movingSource";
 import type { SectionLine, SectionOrientation } from "../observation/crossSection";
 import { ObservationPanel } from "../observation/ObservationPanel";
@@ -92,6 +93,8 @@ export function App() {
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [sectionLine, setSectionLine] = useState<SectionLine>();
   const [movingSource, setMovingSource] = useState<MovingSourceConfig>();
+  const [graphScale, setGraphScale] = useState<GraphScale>(defaultGraphScale);
+  const cycleGraphScale = () => setGraphScale(nextGraphScale);
   const [sectionOrientation, setSectionOrientation] = useState<SectionOrientation>("horizontal");
   const [editHistory, setEditHistory] = useState(createEditHistory);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
@@ -660,6 +663,8 @@ export function App() {
             open={observationPanelOpen}
             observer={observer}
             samples={observationSamples}
+            graphScale={graphScale}
+            onCycleGraphScale={cycleGraphScale}
             onToggle={() => setObservationPanelOpen((open) => !open)}
           />
         )}
@@ -671,6 +676,8 @@ export function App() {
             waveSpeedCellsPerSecond={solverConfig.waveSpeedCellsPerSecond}
             source={movingSource}
             speedRatios={dopplerSpeedRatios}
+            graphScale={graphScale}
+            onCycleGraphScale={cycleGraphScale}
             onSpeedChange={changeMovingSourceSpeed}
             onRemove={removeMovingSource}
           />
@@ -681,6 +688,8 @@ export function App() {
             frameReference={latestFrameReference}
             absorptionLayerCells={solverConfig.absorptionLayerCells}
             line={sectionLine}
+            graphScale={graphScale}
+            onCycleGraphScale={cycleGraphScale}
             onRemove={() => {
               commitEdit();
               setSectionLine(undefined);

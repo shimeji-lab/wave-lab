@@ -11,6 +11,8 @@ import {
   crossSectionGraphWidth,
   extractCrossSection,
 } from "./crossSection";
+import { GraphScaleButton } from "./GraphScaleButton";
+import type { GraphScale } from "./graphScale";
 import { measureWavelength } from "./wavelengthMeasurement";
 
 interface DopplerPanelProps {
@@ -19,6 +21,8 @@ interface DopplerPanelProps {
   waveSpeedCellsPerSecond: number;
   source: MovingSourceConfig;
   speedRatios: readonly number[];
+  graphScale: GraphScale;
+  onCycleGraphScale: () => void;
   onSpeedChange: (speedRatio: number) => void;
   onRemove: () => void;
 }
@@ -33,6 +37,8 @@ export function DopplerPanel({
   waveSpeedCellsPerSecond,
   source,
   speedRatios,
+  graphScale,
+  onCycleGraphScale,
   onSpeedChange,
   onRemove,
 }: DopplerPanelProps) {
@@ -67,7 +73,7 @@ export function DopplerPanel({
           domain,
         );
         const sourceIndex = horizontal ? position.column - domain.left : position.row - domain.top;
-        lineReference.current?.setAttribute("points", createCrossSectionPoints(values));
+        lineReference.current?.setAttribute("points", createCrossSectionPoints(values, undefined, undefined, graphScale));
 
         const markerX = values.length > 1 ? (sourceIndex / (values.length - 1)) * crossSectionGraphWidth : 0;
         markerReference.current?.setAttribute("x1", markerX.toFixed(1));
@@ -104,7 +110,7 @@ export function DopplerPanel({
 
     animationFrameId = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [absorptionLayerCells, frameReference, source, waveSpeedCellsPerSecond]);
+  }, [absorptionLayerCells, frameReference, graphScale, source, waveSpeedCellsPerSecond]);
 
   const centerY = crossSectionGraphHeight / 2;
 
@@ -135,6 +141,7 @@ export function DopplerPanel({
         </div>
       </div>
 
+      <div className="graph-frame">
       <svg
         className="cross-section-graph"
         viewBox={`0 0 ${crossSectionGraphWidth} ${crossSectionGraphHeight}`}
@@ -146,6 +153,8 @@ export function DopplerPanel({
         <polyline ref={lineReference} className="cross-section-line" points="" />
         <line ref={markerReference} y1="0" y2={crossSectionGraphHeight} className="doppler-source-marker" />
       </svg>
+      <GraphScaleButton scale={graphScale} onCycle={onCycleGraphScale} />
+      </div>
       <p className="cross-section-axis">
         <span>← 後ろ</span>
         <span>縦の線が波源の位置</span>

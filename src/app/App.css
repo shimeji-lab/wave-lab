@@ -439,6 +439,23 @@ h1 {
   background: #f8fafc;
 }
 
+.graph-frame {
+  position: relative;
+}
+
+.graph-scale-button {
+  position: absolute;
+  top: 10px;
+  right: 4px;
+  min-height: 26px;
+  padding: 0 8px;
+  border: 1px solid rgb(15 23 42 / 25%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 85%);
+  color: #0f172a;
+  font-size: 0.66rem;
+}
+
 .waveform-zero {
   stroke: #64748b;
   stroke-width: 1;

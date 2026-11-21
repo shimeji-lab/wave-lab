@@ -1,9 +1,10 @@
 import { useEffect, useRef, type RefObject } from "react";
 import { createVisibleDomain } from "../renderer/visibleDomain";
 import type { SimulationFrame } from "../simulation/SimulationController";
+import { GraphScaleButton } from "./GraphScaleButton";
+import type { GraphScale } from "./graphScale";
 import {
   createCrossSectionPoints,
-  crossSectionAmplitudeScale,
   crossSectionGraphHeight,
   crossSectionGraphWidth,
   extractCrossSection,
@@ -14,6 +15,8 @@ interface CrossSectionPanelProps {
   frameReference: RefObject<SimulationFrame | undefined>;
   absorptionLayerCells: number;
   line: SectionLine;
+  graphScale: GraphScale;
+  onCycleGraphScale: () => void;
   onRemove: () => void;
 }
 
@@ -21,6 +24,8 @@ export function CrossSectionPanel({
   frameReference,
   absorptionLayerCells,
   line,
+  graphScale,
+  onCycleGraphScale,
   onRemove,
 }: CrossSectionPanelProps) {
   const polylineReference = useRef<SVGPolylineElement>(null);
@@ -37,7 +42,7 @@ export function CrossSectionPanel({
       if (frame !== undefined && frame !== lastFrame && polylineReference.current !== null) {
         const domain = createVisibleDomain(frame, absorptionLayerCells);
         const values = extractCrossSection(frame.field, frame.columns, line, domain);
-        polylineReference.current.setAttribute("points", createCrossSectionPoints(values));
+        polylineReference.current.setAttribute("points", createCrossSectionPoints(values, undefined, undefined, graphScale));
         lastFrame = frame;
       }
     };
@@ -51,7 +56,7 @@ export function CrossSectionPanel({
     drawLatest();
     animationFrameId = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [absorptionLayerCells, frameReference, line]);
+  }, [absorptionLayerCells, frameReference, graphScale, line]);
 
   const horizontal = line.orientation === "horizontal";
   const centerY = crossSectionGraphHeight / 2;
@@ -65,6 +70,7 @@ export function CrossSectionPanel({
         </div>
         <button type="button" onClick={onRemove}>線を消す</button>
       </header>
+      <div className="graph-frame">
       <svg
         className="cross-section-graph"
         viewBox={`0 0 ${crossSectionGraphWidth} ${crossSectionGraphHeight}`}
@@ -75,9 +81,11 @@ export function CrossSectionPanel({
         <line x1="0" y1={centerY} x2={crossSectionGraphWidth} y2={centerY} className="waveform-zero" />
         <polyline ref={polylineReference} className="cross-section-line" points="" />
       </svg>
+      <GraphScaleButton scale={graphScale} onCycle={onCycleGraphScale} />
+      </div>
       <p className="cross-section-axis">
         <span>{horizontal ? "← 左はし" : "← 上はし"}</span>
-        <span>縦軸は固定: -{crossSectionAmplitudeScale.toFixed(1)} ～ +{crossSectionAmplitudeScale.toFixed(1)}</span>
+        <span>縦軸 -{graphScale} ～ +{graphScale}</span>
         <span>{horizontal ? "右はし →" : "下はし →"}</span>
       </p>
     </aside>

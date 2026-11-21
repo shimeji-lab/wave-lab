@@ -1,16 +1,27 @@
 import type { ObservationSample } from "../simulation/SimulationController";
+import { GraphScaleButton } from "./GraphScaleButton";
+import type { GraphScale } from "./graphScale";
 import { createWaveformPoints, waveformTimeWindowSeconds } from "./waveformPoints";
 
 interface ObservationPanelProps {
   open: boolean;
   observer: { column: number; row: number } | undefined;
   samples: ObservationSample[];
+  graphScale: GraphScale;
+  onCycleGraphScale: () => void;
   onToggle: () => void;
 }
 
-export function ObservationPanel({ open, observer, samples, onToggle }: ObservationPanelProps) {
+export function ObservationPanel({
+  open,
+  observer,
+  samples,
+  graphScale,
+  onCycleGraphScale,
+  onToggle,
+}: ObservationPanelProps) {
   const latestSample = samples.at(-1);
-  const waveformPoints = createWaveformPoints(samples);
+  const waveformPoints = createWaveformPoints(samples, undefined, graphScale);
 
   return (
     <aside className={open ? "observation-panel open" : "observation-panel"} aria-label="観測結果">
@@ -32,12 +43,15 @@ export function ObservationPanel({ open, observer, samples, onToggle }: Observat
               <strong>{latestSample?.simulationTimeSeconds.toFixed(1) ?? "0.0"}</strong>
             </p>
           </div>
-          <svg className="waveform-graph" viewBox="0 0 320 96" role="img" aria-label="観測点で測った波の高さの時間変化">
-            <line x1="0" y1="48" x2="320" y2="48" className="waveform-zero" />
-            <polyline points={waveformPoints} className="waveform-line" />
-          </svg>
+          <div className="graph-frame">
+            <svg className="waveform-graph" viewBox="0 0 320 96" role="img" aria-label="観測点で測った波の高さの時間変化">
+              <line x1="0" y1="48" x2="320" y2="48" className="waveform-zero" />
+              <polyline points={waveformPoints} className="waveform-line" />
+            </svg>
+            <GraphScaleButton scale={graphScale} onCycle={onCycleGraphScale} />
+          </div>
           <p className="measurement-note">
-            横軸は時間（左から右へ進む・横幅いっぱいで {waveformTimeWindowSeconds}）。縦軸は固定: -3.0 ～ +3.0
+            横軸は時間（左から右へ進む・横幅いっぱいで {waveformTimeWindowSeconds}）。縦軸は -{graphScale} ～ +{graphScale}
           </p>
         </div>
       )}
