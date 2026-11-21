@@ -102,6 +102,26 @@ Numerically distributed over a small kernel rather than an unbounded mathematica
 
 A set of coherent source cells forming an approximately planar wave.
 
+### Moving source (Doppler experiment, since 0.1.0-prototype.17)
+
+A single continuous source moves along one grid axis at constant speed
+`v = speedRatio × c` (`src/physics/movingSource.ts`).
+
+- The source oscillates at its own fixed frequency `f = c / λ` using absolute
+  simulation time. Only its position changes, so the Doppler shift emerges from
+  the solver; nothing is drawn or animated separately.
+- The Gaussian source kernel accepts fractional centres so the source glides
+  between cells instead of jumping. For integer centres the kernel is unchanged.
+- The source wraps from the far edge of the visible field back to the near edge.
+- Source motion does not change the CFL limit; `speedRatio` above 1 is allowed
+  and produces a Mach cone.
+- Validation (`movingSource.test.ts`): with `v = 0.5c` and `λ = 24` cells, the
+  solver's wavelength ahead of the source and behind it match
+  `λ(1 − v/c) = 12` and `λ(1 + v/c) = 36` within 10 %.
+- The on-screen readout measures wavelength from zero-crossing spacing along
+  the path, only within the stretch filled since the last restart
+  (`(c − v)t` ahead, `(c + v)t` behind), and shows "いまは測れない" otherwise.
+
 ## 5. Boundaries
 
 Required for v0.1:

@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import {
   createExperimentPreset,
+  dopplerSpeedRatios,
   experimentPresets,
   type ExperimentPresetId,
 } from "../experiments/presets";
 import { CrossSectionPanel } from "../observation/CrossSectionPanel";
+import { DopplerPanel } from "../observation/DopplerPanel";
+import type { MovingSourceConfig } from "../physics/movingSource";
 import type { SectionLine, SectionOrientation } from "../observation/crossSection";
 import { ObservationPanel } from "../observation/ObservationPanel";
 import { createSingleSlitBoundaryCells } from "../physics/boundaries";
@@ -88,6 +91,7 @@ export function App() {
   const [slitWidthCells, setSlitWidthCells] = useState(24);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [sectionLine, setSectionLine] = useState<SectionLine>();
+  const [movingSource, setMovingSource] = useState<MovingSourceConfig>();
   const [sectionOrientation, setSectionOrientation] = useState<SectionOrientation>("horizontal");
   const [editHistory, setEditHistory] = useState(createEditHistory);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
@@ -162,6 +166,7 @@ export function App() {
     continuousSourceEnabled,
     observer,
     sectionLine,
+    movingSource,
   });
 
   // Called immediately before a learner-visible placement change so that
@@ -203,6 +208,11 @@ export function App() {
 
     setObserver(scene.observer);
     setSectionLine(scene.sectionLine);
+
+    if (scene.movingSource !== movingSource) {
+      controller?.setMovingSource(scene.movingSource);
+      setMovingSource(scene.movingSource);
+    }
 
     if (scene.sectionLine !== undefined) {
       setSectionOrientation(scene.sectionLine.orientation);
@@ -278,6 +288,7 @@ export function App() {
     setContinuousSourceEnabled(false);
     setObserver(undefined);
     setSectionLine(undefined);
+    setMovingSource(undefined);
     pendingObservationSamplesReference.current = [];
     setObservationSamples([]);
     setObservationPanelOpen(false);
@@ -471,6 +482,7 @@ export function App() {
     setContinuousSourceEnabled(preset.sources.length > 0);
     setObserver(undefined);
     setSectionLine(undefined);
+    setMovingSource(undefined);
     pendingObservationSamplesReference.current = [];
     setObservationSamples([]);
     setObservationPanelOpen(false);
@@ -485,6 +497,8 @@ export function App() {
     controllerReference.current?.setContinuousSources(preset.sources);
     controllerReference.current?.setContinuousSource(preset.sources.length > 0);
     controllerReference.current?.setSpeed(1);
+    setMovingSource(preset.movingSource);
+    controllerReference.current?.setMovingSource(preset.movingSource);
 
     if (preset.pulse !== undefined) {
       controllerReference.current?.injectPulse(
@@ -545,6 +559,24 @@ export function App() {
         ? "wall"
         : interactionMode;
 
+  const changeMovingSourceSpeed = (speedRatio: number) => {
+    if (movingSource === undefined || movingSource.speedRatio === speedRatio) {
+      return;
+    }
+
+    commitEdit();
+    const nextSource = { ...movingSource, speedRatio };
+    setMovingSource(nextSource);
+    // Keep the current position so changing speed does not teleport the source.
+    controllerReference.current?.setMovingSource(nextSource, true);
+  };
+
+  const removeMovingSource = () => {
+    commitEdit();
+    setMovingSource(undefined);
+    controllerReference.current?.setMovingSource(undefined);
+  };
+
   const changeSectionOrientation = (orientation: SectionOrientation) => {
     setSectionOrientation(orientation);
 
@@ -593,6 +625,7 @@ export function App() {
             continuousSources={continuousSources}
             selectedSourceId={selectedSourceId}
             sectionLine={sectionLine}
+            movingSourceActive={movingSource !== undefined}
             boundaryCells={boundaryCells}
             interactionMode={interactionMode}
             onFieldTap={handleFieldTap}
@@ -614,7 +647,10 @@ export function App() {
       </section>
 
       <div className="sheet-area">
-        {observer === undefined && selectedSource === undefined && sectionLine === undefined ? (
+        {observer === undefined &&
+        selectedSource === undefined &&
+        sectionLine === undefined &&
+        movingSource === undefined ? (
           <p className="sheet-placeholder">
             観測点を置くと、ここに波の高さのグラフが出ます。波源をタップすると、ここで設定できます。
           </p>
@@ -625,6 +661,18 @@ export function App() {
             observer={observer}
             samples={observationSamples}
             onToggle={() => setObservationPanelOpen((open) => !open)}
+          />
+        )}
+
+        {movingSource === undefined || selectedSource !== undefined ? null : (
+          <DopplerPanel
+            frameReference={latestFrameReference}
+            absorptionLayerCells={solverConfig.absorptionLayerCells}
+            waveSpeedCellsPerSecond={solverConfig.waveSpeedCellsPerSecond}
+            source={movingSource}
+            speedRatios={dopplerSpeedRatios}
+            onSpeedChange={changeMovingSourceSpeed}
+            onRemove={removeMovingSource}
           />
         )}
 

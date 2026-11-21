@@ -9,11 +9,15 @@ export function addGaussianSourceTerm(
 ): void {
   const radiusCells = 6;
   const varianceCellsSquared = 4;
+  // Fractional centres are allowed so a moving source glides smoothly between
+  // cells. For integer centres this is identical to the original kernel.
+  const centerColumn = Math.round(column);
+  const centerRow = Math.round(row);
 
   for (let rowOffset = -radiusCells; rowOffset <= radiusCells; rowOffset += 1) {
     for (let columnOffset = -radiusCells; columnOffset <= radiusCells; columnOffset += 1) {
-      const targetColumn = column + columnOffset;
-      const targetRow = row + rowOffset;
+      const targetColumn = centerColumn + columnOffset;
+      const targetRow = centerRow + rowOffset;
 
       if (
         targetColumn <= 0 ||
@@ -24,7 +28,7 @@ export function addGaussianSourceTerm(
         continue;
       }
 
-      const distanceSquared = columnOffset ** 2 + rowOffset ** 2;
+      const distanceSquared = (targetColumn - column) ** 2 + (targetRow - row) ** 2;
       const kernelWeight = Math.exp(-distanceSquared / (2 * varianceCellsSquared));
       sourceTerm[targetRow * config.columns + targetColumn] += strength * kernelWeight;
     }

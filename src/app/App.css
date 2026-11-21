@@ -457,6 +457,90 @@ h1 {
   padding-top: 4px;
 }
 
+.doppler-panel {
+  padding: 8px 14px 8px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.doppler-panel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.doppler-panel header div {
+  display: grid;
+  gap: 1px;
+  font-size: 0.85rem;
+}
+
+.doppler-panel header span {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+.doppler-panel header button {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+}
+
+.doppler-speed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.doppler-panel .cross-section-graph {
+  height: clamp(56px, 9dvh, 110px);
+}
+
+.doppler-source-marker {
+  stroke: #0f172a;
+  stroke-width: 2;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.doppler-readout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.doppler-readout p {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--surface-raised);
+}
+
+.doppler-readout span,
+.doppler-readout small {
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  line-height: 1.35;
+}
+
+.doppler-readout strong {
+  font-size: 0.95rem;
+}
+
+.doppler-panel .measurement-note {
+  font-size: 0.62rem;
+}
+
 .cross-section-panel {
   padding: 8px 14px 8px;
   border-top: 1px solid var(--line);
@@ -940,6 +1024,7 @@ h1 {
   .action-row,
   .observation-content,
   .cross-section-panel > *,
+  .doppler-panel > *,
   .source-settings-panel > * {
     width: min(720px, 100%);
     margin-inline: auto;
@@ -1032,6 +1117,13 @@ h1 {
 
   .experiment-preset-card {
     min-height: 0;
+  }
+}
+
+@media (max-width: 560px) and (orientation: portrait) {
+  .doppler-panel .measurement-note,
+  .doppler-panel header span {
+    display: none;
   }
 }
 

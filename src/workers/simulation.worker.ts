@@ -9,6 +9,13 @@ import {
   type SolverState,
 } from "../physics/solver";
 import { addGaussianSourceTerm, rickerWavelet } from "../physics/sources";
+import {
+  movingSourceAxisPosition,
+  movingSourcePosition,
+  movingSourceStrength,
+  secondsSinceMovingSourceRestart,
+  type MovingSourceConfig,
+} from "../physics/movingSource";
 import { workerProtocolVersion, type WorkerCommand, type WorkerEvent } from "./protocol";
 import type { ContinuousSourceConfig } from "../simulation/types";
 import { scheduleSimulationSteps } from "./timing";
@@ -26,6 +33,8 @@ let accumulatedSteps = 0;
 let performanceWindowStartedAt = performance.now();
 let performanceWindowStepCount = 0;
 let sourceTerm: Float32Array | undefined;
+let movingSource: MovingSourceConfig | undefined;
+let movingSourceStartedAt = 0;
 let activePulses: Array<{
   column: number;
   row: number;
@@ -68,6 +77,7 @@ function handleCommand(command: WorkerCommand): void {
       continuousSourceEnabled = false;
       continuousSources = [];
       observer = undefined;
+      movingSource = undefined;
       simulationStepCount = 0;
       playbackSpeed = 1;
       resetPerformanceWindow();
@@ -92,6 +102,7 @@ function handleCommand(command: WorkerCommand): void {
       continuousSourceEnabled = false;
       continuousSources = [];
       observer = undefined;
+      movingSource = undefined;
       activePulses = [];
       simulationStepCount = 0;
       resetPerformanceWindow();
@@ -115,6 +126,26 @@ function handleCommand(command: WorkerCommand): void {
       };
       emitObservationSample();
       return;
+    case "SET_MOVING_SOURCE": {
+      const now = requireState().simulationTimeSeconds;
+
+      if (command.source !== undefined && command.keepPosition && movingSource !== undefined) {
+        movingSource = {
+          ...command.source,
+          start: movingSourceAxisPosition(
+            movingSource,
+            requireState().simulationTimeSeconds - movingSourceStartedAt,
+            requireConfig().waveSpeedCellsPerSecond,
+          ),
+        };
+      } else {
+        movingSource = command.source === undefined ? undefined : { ...command.source };
+      }
+
+      movingSourceStartedAt = now;
+      emitFrame();
+      return;
+    }
     case "CLEAR_OBSERVER":
       observer = undefined;
       return;
@@ -212,6 +243,24 @@ function advanceSimulationStep(): void {
     }
   }
 
+  const movingPosition = currentMovingSourcePosition(currentConfig);
+
+  if (movingSource !== undefined && movingPosition !== undefined) {
+    // Oscillation uses absolute simulation time so a speed change does not
+    // restart the phase; only the position uses the time since the last change.
+    addGaussianSourceTerm(
+      currentSourceTerm,
+      currentConfig,
+      movingPosition.column,
+      movingPosition.row,
+      movingSourceStrength(
+        movingSource,
+        currentState.simulationTimeSeconds,
+        currentConfig.waveSpeedCellsPerSecond,
+      ),
+    );
+  }
+
   for (const pulse of activePulses) {
     const elapsedSeconds = currentState.simulationTimeSeconds - pulse.startedAtSeconds;
     const pulseStrength = rickerWavelet(
@@ -277,6 +326,20 @@ function emitObservationSample(): void {
   });
 }
 
+function currentMovingSourcePosition(
+  currentConfig: SolverConfig,
+): { column: number; row: number } | undefined {
+  if (movingSource === undefined) {
+    return undefined;
+  }
+
+  return movingSourcePosition(
+    movingSource,
+    requireState().simulationTimeSeconds - movingSourceStartedAt,
+    currentConfig.waveSpeedCellsPerSecond,
+  );
+}
+
 function emitFrame(): void {
   const currentState = requireState();
   const currentConfig = requireConfig();
@@ -288,6 +351,15 @@ function emitFrame(): void {
     rows: currentConfig.rows,
     simulationTimeSeconds: currentState.simulationTimeSeconds,
     fieldBuffer,
+    movingSourcePosition: currentMovingSourcePosition(currentConfig),
+    movingSourceSecondsSinceRestart:
+      movingSource === undefined
+        ? undefined
+        : secondsSinceMovingSourceRestart(
+            movingSource,
+            currentState.simulationTimeSeconds - movingSourceStartedAt,
+            currentConfig.waveSpeedCellsPerSecond,
+          ),
   };
 
   // The renderer must not receive the Worker-owned solver array. Copying is

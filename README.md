@@ -79,6 +79,7 @@ The current prototype includes:
 16. A fixed-time-scale observation graph
 17. An icon tool dock with a context bar, undo for placed objects, and panels that never cover the field
 18. A horizontal/vertical cross-section graph of the current wave field
+19. A Doppler-effect experiment with a moving source, selectable speeds (including faster than the wave), and measured wavelengths ahead and behind
 
 The browser-side Android and rotation diagnostic is implemented. Physical-device results still need to be recorded using the [Android validation checklist](docs/validation/ANDROID_PERFORMANCE_AND_ROTATION.md).
 

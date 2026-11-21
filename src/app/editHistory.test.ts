@@ -23,6 +23,7 @@ function scene(sourceCount: number): SceneSnapshot {
     continuousSourceEnabled: sourceCount > 0,
     observer: undefined,
     sectionLine: undefined,
+    movingSource: undefined,
   };
 }
 

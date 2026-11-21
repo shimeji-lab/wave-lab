@@ -1,6 +1,7 @@
 import type { SolverConfig } from "../physics/solver";
 import type { BoundaryCell } from "../physics/solver";
 import type { ContinuousSourceConfig } from "../simulation/types";
+import type { MovingSourceConfig } from "../physics/movingSource";
 
 export const workerProtocolVersion = 1 as const;
 
@@ -15,6 +16,13 @@ export type WorkerCommand =
   | { version: typeof workerProtocolVersion; type: "SET_SPEED"; multiplier: 0.25 | 0.5 | 1 | 2 }
   | { version: typeof workerProtocolVersion; type: "SET_OBSERVER"; column: number; row: number }
   | { version: typeof workerProtocolVersion; type: "CLEAR_OBSERVER" }
+  | {
+      version: typeof workerProtocolVersion;
+      type: "SET_MOVING_SOURCE";
+      source: MovingSourceConfig | undefined;
+      // Keep the current position (for a speed change) instead of restarting.
+      keepPosition: boolean;
+    }
   | { version: typeof workerProtocolVersion; type: "SET_BOUNDARIES"; cells: BoundaryCell[] }
   | {
       version: typeof workerProtocolVersion;
@@ -34,6 +42,8 @@ export type WorkerEvent =
       rows: number;
       simulationTimeSeconds: number;
       fieldBuffer: ArrayBuffer;
+      movingSourcePosition?: { column: number; row: number };
+      movingSourceSecondsSinceRestart?: number;
     }
   | { version: typeof workerProtocolVersion; type: "WARNING"; message: string }
   | {

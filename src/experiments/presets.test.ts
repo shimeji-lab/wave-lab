@@ -32,6 +32,17 @@ describe("experiment presets", () => {
     );
   });
 
+  it("moves the Doppler source along the longer side of the field", () => {
+    const wide = createExperimentPreset("doppler", grid);
+    const tall = createExperimentPreset("doppler", { columns: 120, rows: 200, visibleInsetCells: 20 });
+
+    expect(wide.movingSource?.axis).toBe("horizontal");
+    expect(tall.movingSource?.axis).toBe("vertical");
+    expect(wide.movingSource?.speedRatio).toBeLessThan(1);
+    expect(wide.movingSource!.start).toBeGreaterThan(wide.movingSource!.min);
+    expect(wide.movingSource!.start).toBeLessThan(wide.movingSource!.max);
+  });
+
   it("places a coherent source line and a centered opening for diffraction", () => {
     const preset = createExperimentPreset("diffraction", grid);
     const sourceColumns = new Set(preset.sources.map((source) => source.column));

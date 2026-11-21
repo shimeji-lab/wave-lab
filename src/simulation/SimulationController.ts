@@ -1,3 +1,4 @@
+import type { MovingSourceConfig } from "../physics/movingSource";
 import type { BoundaryCell, SolverConfig } from "../physics/solver";
 import type { ContinuousSourceConfig } from "./types";
 import {
@@ -11,6 +12,8 @@ export interface SimulationFrame {
   rows: number;
   field: Float32Array;
   simulationTimeSeconds: number;
+  movingSourcePosition?: { column: number; row: number };
+  movingSourceSecondsSinceRestart?: number;
 }
 
 export interface SimulationControllerCallbacks {
@@ -80,6 +83,10 @@ export class SimulationController {
     this.send({ version: workerProtocolVersion, type: "SET_OBSERVER", column, row });
   }
 
+  public setMovingSource(source: MovingSourceConfig | undefined, keepPosition = false): void {
+    this.send({ version: workerProtocolVersion, type: "SET_MOVING_SOURCE", source, keepPosition });
+  }
+
   public clearObserver(): void {
     this.send({ version: workerProtocolVersion, type: "CLEAR_OBSERVER" });
   }
@@ -123,6 +130,8 @@ export class SimulationController {
           rows: event.rows,
           field: new Float32Array(event.fieldBuffer),
           simulationTimeSeconds: event.simulationTimeSeconds,
+          movingSourcePosition: event.movingSourcePosition,
+          movingSourceSecondsSinceRestart: event.movingSourceSecondsSinceRestart,
         });
         return;
       case "WARNING":

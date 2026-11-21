@@ -79,7 +79,12 @@ cell and graphs the current displacement along it with the same fixed vertical
 scale as the observation graph. It reads the solver's latest frame only; it
 does not compute physics. Diagonal lines are intentionally not supported.
 
-Panels (observation results, cross-section, source settings) sit between the field and the
+ドップラー効果 (gallery preset, since 0.1.0-prototype.17) moves one source along
+the longer side of the field. Its panel offers four speeds (0.3, 0.6, 0.9 and
+1.3 times the wave speed), a cross-section along the path with the source
+position marked, and measured versus textbook wavelengths ahead and behind.
+
+Panels (observation results, Doppler, cross-section, source settings) sit between the field and the
 tool dock. They never cover the field; the field shrinks to fit instead.
 Escape closes open panels and menus.
 

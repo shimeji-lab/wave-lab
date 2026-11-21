@@ -25,6 +25,7 @@ interface WaveCanvasProps {
   continuousSources: ContinuousSourceConfig[];
   selectedSourceId?: string;
   sectionLine?: SectionLine;
+  movingSourceActive?: boolean;
   boundaryCells: BoundaryCell[];
   interactionMode: InteractionMode;
   onFieldTap: (column: number, row: number) => void;
@@ -41,6 +42,7 @@ export function WaveCanvas({
   continuousSources,
   selectedSourceId,
   sectionLine,
+  movingSourceActive = false,
   boundaryCells,
   interactionMode,
   onFieldTap,
@@ -48,6 +50,7 @@ export function WaveCanvas({
   onRenderFramesPerSecond,
 }: WaveCanvasProps) {
   const canvasReference = useRef<HTMLCanvasElement>(null);
+  const movingMarkerReference = useRef<SVGGElement>(null);
   const previousPointerCell = useRef<BoundaryCell | null>(null);
   const strokeCells = useRef<BoundaryCell[]>([]);
   // Presets such as the single slit use a row of sources to approximate a
@@ -97,6 +100,15 @@ export function WaveCanvas({
 
         for (const cell of boundaryCells) {
           context.fillRect(cell.column - domain.left, cell.row - domain.top, 1, 1);
+        }
+
+        // The moving source's position comes with each frame from the Worker,
+        // so the marker is moved here rather than through React state.
+        if (frame.movingSourcePosition !== undefined && movingMarkerReference.current !== null) {
+          movingMarkerReference.current.setAttribute(
+            "transform",
+            `translate(${frame.movingSourcePosition.column + 0.5} ${frame.movingSourcePosition.row + 0.5})`,
+          );
         }
 
         lastRenderedFrame = frame;
@@ -267,6 +279,12 @@ export function WaveCanvas({
                 )}
               </g>
             ))}
+            {movingSourceActive ? (
+              <g ref={movingMarkerReference} className="source-marker moving" transform="translate(-100 -100)">
+                <circle className="source-marker-ripple" r="3.6" />
+                <circle className="source-marker-dot" r="3.6" />
+              </g>
+            ) : null}
             {observer === undefined ? null : (
               <g
                 className="observer-marker"

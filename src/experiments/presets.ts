@@ -1,8 +1,9 @@
 import { createSingleSlitBoundaryCells } from "../physics/boundaries";
 import type { BoundaryCell } from "../physics/solver";
 import type { ContinuousSourceConfig } from "../simulation/types";
+import type { MovingSourceConfig } from "../physics/movingSource";
 
-export type ExperimentPresetId = "pulse" | "interference" | "reflection" | "diffraction";
+export type ExperimentPresetId = "pulse" | "interference" | "reflection" | "diffraction" | "doppler";
 
 export interface ExperimentPreset {
   id: ExperimentPresetId;
@@ -21,6 +22,7 @@ export interface ExperimentPresetSetup {
   boundaryCells: BoundaryCell[];
   sources: ContinuousSourceConfig[];
   pulse?: { column: number; row: number; amplitude: number };
+  movingSource?: MovingSourceConfig;
   interactionMode: "pulse" | "sourceSelect";
 }
 
@@ -49,7 +51,15 @@ export const experimentPresets: readonly ExperimentPreset[] = [
     goal: "せまいすき間を通った波は、その先へ広がる。",
     prompt: "すき間の前と後で、波の広がり方を見比べよう。",
   },
+  {
+    id: "doppler",
+    title: "ドップラー効果",
+    goal: "動きながら波を出すと、前では波がつまり、後ろでは広がる。",
+    prompt: "速さを変えて、前と後ろの波長を見比べよう。",
+  },
 ];
+
+export const dopplerSpeedRatios = [0.3, 0.6, 0.9, 1.3] as const;
 
 export function createExperimentPreset(
   presetId: ExperimentPresetId,
@@ -102,7 +112,34 @@ export function createExperimentPreset(
         sources: createLineSources(sourceColumn, centerRow, visibleBounds),
         interactionMode: "sourceSelect",
       };
+    case "doppler":
+      return {
+        boundaryCells: [],
+        sources: [],
+        movingSource: createDopplerSource(visibleBounds),
+        interactionMode: "pulse",
+      };
   }
+}
+
+// The source travels along the longer side of the field (top to bottom on a
+// portrait phone, left to right on a PC) so there is room to see the waves
+// bunch up ahead of it.
+function createDopplerSource(bounds: ReturnType<typeof createVisibleBounds>): MovingSourceConfig {
+  const horizontal = bounds.right - bounds.left >= bounds.bottom - bounds.top;
+  const min = horizontal ? bounds.left : bounds.top;
+  const max = horizontal ? bounds.right : bounds.bottom;
+
+  return {
+    axis: horizontal ? "horizontal" : "vertical",
+    lane: Math.round(horizontal ? (bounds.top + bounds.bottom) / 2 : (bounds.left + bounds.right) / 2),
+    start: Math.round(min + (max - min) * 0.12),
+    min,
+    max,
+    speedRatio: 0.6,
+    wavelengthCells: 24,
+    amplitude: 0.8,
+  };
 }
 
 function createVisibleBounds(grid: ExperimentPresetGrid) {
