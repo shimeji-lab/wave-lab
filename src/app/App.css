@@ -94,6 +94,7 @@ button:disabled {
 
 h1 {
   margin: 0;
+  white-space: nowrap;
   font-size: 1.1rem;
   letter-spacing: 0.02em;
 }
@@ -202,33 +203,94 @@ h1 {
   pointer-events: none;
 }
 
-.source-marker-dot,
-.observer-marker,
-.observer-marker-cross {
+.field-marker-overlay circle,
+.field-marker-overlay path {
   vector-effect: non-scaling-stroke;
 }
 
-.source-marker.disabled {
-  opacity: 0.45;
+/* Wave source: navy disc, white rim, white number. A white ring expands from
+   enabled sources so "this point is emitting waves" reads at a glance. */
+.source-marker-dot {
+  fill: #0f172a;
+  stroke: #ffffff;
+  stroke-width: 2;
 }
 
-.source-marker-dot {
-  fill: #7c3aed;
+.source-marker-label {
+  fill: #ffffff;
+  font-size: 4px;
+  font-weight: 800;
+  font-family: system-ui, sans-serif;
+}
+
+.source-marker-ripple {
+  fill: none;
   stroke: #ffffff;
   stroke-width: 1.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: source-ripple 1.6s ease-out infinite;
 }
 
-.observer-marker {
-  fill: #facc15;
-  stroke: #0f172a;
-  stroke-width: 1.5;
+@keyframes source-ripple {
+  from {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(2.4);
+  }
 }
 
-.observer-marker-cross {
+.source-marker-selection {
+  fill: none;
+  stroke: #fde047;
+  stroke-width: 3;
+}
+
+.source-marker.disabled .source-marker-dot {
+  fill: #475569;
+  stroke-dasharray: 3 2;
+}
+
+.source-marker.disabled .source-marker-label {
+  fill: #cbd5e1;
+}
+
+/* Observation point: orange target that matches the graph line colour. */
+.observer-marker-halo {
   fill: none;
   stroke: #0f172a;
-  stroke-width: 1.25;
+  stroke-width: 5;
+  opacity: 0.55;
+}
+
+.observer-marker-ring {
+  fill: rgb(251 146 60 / 18%);
+  stroke: #fb923c;
+  stroke-width: 2.5;
+}
+
+.observer-marker-ticks {
+  fill: none;
+  stroke: #fb923c;
+  stroke-width: 2.5;
   stroke-linecap: round;
+}
+
+.observer-marker-center {
+  fill: #ffffff;
+  stroke: #0f172a;
+  stroke-width: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .source-marker-ripple {
+    animation: none;
+    opacity: 0;
+  }
 }
 
 .color-legend {
@@ -275,6 +337,15 @@ h1 {
 .sheet-area {
   grid-area: sheet;
   min-height: 0;
+}
+
+.sheet-placeholder {
+  display: none;
+  margin: 0;
+  padding: 16px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.6;
 }
 
 .observation-panel {
@@ -361,7 +432,7 @@ h1 {
 
 .waveform-line {
   fill: none;
-  stroke: #ea580c;
+  stroke: #f97316;
   stroke-width: 2.5;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -806,15 +877,15 @@ h1 {
   }
 }
 
-/* ---------- Short landscape phones: controls move to a side column ---------- */
+/* ---------- Landscape phones and wide PC screens: controls in a side column ---------- */
 
-@media (orientation: landscape) and (max-height: 560px) {
+@media (orientation: landscape) and (max-height: 560px), (orientation: landscape) and (min-width: 900px) {
   .app-shell {
     grid-template-areas:
       "field header"
       "field sheet"
       "field dock";
-    grid-template-columns: minmax(0, 1fr) min(340px, 42vw);
+    grid-template-columns: minmax(0, 1fr) min(360px, 42vw);
     grid-template-rows: auto minmax(0, 1fr) auto;
   }
 
@@ -836,6 +907,18 @@ h1 {
 
   .tool-dock {
     border-left: 1px solid var(--line);
+  }
+
+  .sheet-placeholder {
+    display: block;
+  }
+
+  .context-bar {
+    flex-wrap: wrap;
+  }
+
+  .mode-hint {
+    white-space: normal;
   }
 
   .tool-row {

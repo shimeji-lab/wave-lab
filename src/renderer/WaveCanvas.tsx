@@ -21,6 +21,7 @@ interface WaveCanvasProps {
   displayMode: "color" | "monochrome";
   observer: { column: number; row: number } | undefined;
   continuousSources: ContinuousSourceConfig[];
+  selectedSourceId?: string;
   boundaryCells: BoundaryCell[];
   interactionMode: InteractionMode;
   onFieldTap: (column: number, row: number) => void;
@@ -35,6 +36,7 @@ export function WaveCanvas({
   displayMode,
   observer,
   continuousSources,
+  selectedSourceId,
   boundaryCells,
   interactionMode,
   onFieldTap,
@@ -44,6 +46,11 @@ export function WaveCanvas({
   const canvasReference = useRef<HTMLCanvasElement>(null);
   const previousPointerCell = useRef<BoundaryCell | null>(null);
   const strokeCells = useRef<BoundaryCell[]>([]);
+  // Presets such as the single slit use a row of sources to approximate a
+  // plane wave; numbered markers would crowd the field, so many sources are
+  // drawn as small plain dots instead.
+  const compactSources = continuousSources.length > 4;
+  const sourceRadius = compactSources ? 2.6 : 3.6;
   const visibleDomain =
     gridSize === undefined ? undefined : createVisibleDomain(gridSize, absorptionLayerCells);
 
@@ -190,19 +197,45 @@ export function WaveCanvas({
             viewBox={`${visibleDomain.left} ${visibleDomain.top} ${visibleDomain.columns} ${visibleDomain.rows}`}
             aria-hidden="true"
           >
-            {continuousSources.map((source) => (
+            {/* Marker sizes are in grid cells so they scale with the field;
+                strokes use non-scaling-stroke to stay crisp at any zoom. */}
+            {continuousSources.map((source, index) => (
               <g
                 key={source.id}
-                className={`source-marker ${source.enabled ? "" : "disabled"}`}
+                className={[
+                  "source-marker",
+                  compactSources ? "compact" : "",
+                  source.enabled ? "" : "disabled",
+                  source.id === selectedSourceId ? "selected" : "",
+                ].filter(Boolean).join(" ")}
                 transform={`translate(${source.column + 0.5} ${source.row + 0.5})`}
               >
-                <circle className="source-marker-dot" r="3.25" />
+                {source.enabled && !compactSources ? (
+                  <circle className="source-marker-ripple" r={sourceRadius} />
+                ) : null}
+                {source.id === selectedSourceId ? (
+                  <circle className="source-marker-selection" r={sourceRadius + 2.6} />
+                ) : null}
+                <circle className="source-marker-dot" r={sourceRadius} />
+                {compactSources ? null : (
+                  <text className="source-marker-label" textAnchor="middle" dominantBaseline="central">
+                    {index + 1}
+                  </text>
+                )}
               </g>
             ))}
             {observer === undefined ? null : (
-              <g transform={`translate(${observer.column + 0.5} ${observer.row + 0.5})`}>
-                <circle className="observer-marker" r="4" />
-                <path className="observer-marker-cross" d="M -5.5 0 H 5.5 M 0 -5.5 V 5.5" />
+              <g
+                className="observer-marker"
+                transform={`translate(${observer.column + 0.5} ${observer.row + 0.5})`}
+              >
+                <circle className="observer-marker-halo" r="4" />
+                <circle className="observer-marker-ring" r="4" />
+                <path
+                  className="observer-marker-ticks"
+                  d="M 0 -7 V -5 M 0 5 V 7 M -7 0 H -5 M 5 0 H 7"
+                />
+                <circle className="observer-marker-center" r="1"  />
               </g>
             )}
           </svg>

@@ -556,6 +556,7 @@ export function App() {
             displayMode={displayMode}
             observer={observer}
             continuousSources={continuousSources}
+            selectedSourceId={selectedSourceId}
             boundaryCells={boundaryCells}
             interactionMode={interactionMode}
             onFieldTap={handleFieldTap}
@@ -577,6 +578,11 @@ export function App() {
       </section>
 
       <div className="sheet-area">
+        {observer === undefined && selectedSource === undefined ? (
+          <p className="sheet-placeholder">
+            観測点を置くと、ここに波の高さのグラフが出ます。波源をタップすると、ここで設定できます。
+          </p>
+        ) : null}
         {observer === undefined || selectedSource !== undefined ? null : (
           <ObservationPanel
             open={observationPanelOpen}
@@ -802,9 +808,12 @@ function createPrototypeConfig(): SolverConfig {
   // Match the grid's aspect ratio to the space the field actually gets, so the
   // field is not letterboxed. Short landscape screens put the controls in a
   // side column; other screens stack header, field and the bottom tool dock.
-  const sideLayout = window.innerWidth > window.innerHeight && window.innerHeight <= 560;
+  // Keep in sync with the side-column media query in App.css.
+  const sideLayout =
+    window.innerWidth > window.innerHeight &&
+    (window.innerHeight <= 560 || window.innerWidth >= 900);
   const availableWidth = sideLayout
-    ? window.innerWidth - Math.min(340, window.innerWidth * 0.42)
+    ? window.innerWidth - Math.min(360, window.innerWidth * 0.42)
     : window.innerWidth;
   const availableHeight = sideLayout
     ? window.innerHeight

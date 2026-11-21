@@ -32,8 +32,12 @@ the start of that gesture; horizontal drags and deliberate taps still edit it.
 
 Continuous-source and observation markers are vector overlays. They remain
 sharp when the low-resolution simulation grid is enlarged on a phone or PC.
-The source marker is a small, plain colored circle so it identifies position
-without competing visually with the wave field.
+Since 0.1.0-prototype.15 a source marker is a navy disc with a white rim and
+its number; a white ring expands from enabled sources, and the source whose
+settings are open has a yellow outer ring. Presets with more than four sources
+(plane-wave rows) use small plain dots instead so the field is not crowded.
+The observation point is an orange target that matches the graph line colour.
+Markers do not rely on colour alone: numbers, shape and the ring carry meaning.
 
 ## 3. Modes
 
