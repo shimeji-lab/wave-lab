@@ -122,6 +122,24 @@ A single continuous source moves along one grid axis at constant speed
   the path, only within the stretch filled since the last restart
   (`(c − v)t` ahead, `(c + v)t` behind), and shows "いまは測れない" otherwise.
 
+### Theoretical wavefront overlay (since 0.1.0-prototype.19)
+
+An optional overlay draws crests as solid circles and troughs as dashed
+circles for waves that travel straight from continuous sources
+(`src/physics/wavefronts.ts`). It is a comparison aid drawn on top of the
+solver's field, never a replacement for it.
+
+- The Worker records the time and position at which each source emits a crest
+  (effective phase π/2) or trough (3π/2). A circle's radius is `c (t − t_emit)`.
+- The outgoing wave lags the source term. The 2-D far-field asymptote is π/4;
+  a probe with this solver measured 0.84–0.98 rad (λ = 16–36 cells, r = 30–110
+  cells), so the overlay uses 0.9 rad.
+- Validation (`wavefronts.test.ts`): drawn crests sit within 1 cell of the
+  solver's crests for a resting source, and within 1.5 cells (measured worst
+  case ≈ 1.05) for a source moving at 0.5c.
+- Pulses are not drawn. Walls reflect and block waves, so the overlay pauses
+  while any wall exists.
+
 ## 5. Boundaries
 
 Required for v0.1:

@@ -94,6 +94,7 @@ export function App() {
   const [sectionLine, setSectionLine] = useState<SectionLine>();
   const [movingSource, setMovingSource] = useState<MovingSourceConfig>();
   const [graphScale, setGraphScale] = useState<GraphScale>(defaultGraphScale);
+  const [wavefrontsRequested, setWavefrontsRequested] = useState(false);
   const cycleGraphScale = () => setGraphScale(nextGraphScale);
   const [sectionOrientation, setSectionOrientation] = useState<SectionOrientation>("horizontal");
   const [editHistory, setEditHistory] = useState(createEditHistory);
@@ -268,6 +269,14 @@ export function App() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  // The theoretical circles describe waves that travel straight from a source.
+  // Walls reflect and block waves, so the overlay pauses while walls exist.
+  const wavefrontsVisible = wavefrontsRequested && boundaryCells.length === 0;
+
+  useEffect(() => {
+    controllerReference.current?.setWavefronts(wavefrontsVisible);
+  }, [wavefrontsVisible]);
 
   const handlePlayPause = () => {
     if (simulationStatus === "running") {
@@ -629,12 +638,26 @@ export function App() {
             selectedSourceId={selectedSourceId}
             sectionLine={sectionLine}
             movingSourceActive={movingSource !== undefined}
+            showWavefronts={wavefrontsVisible}
             boundaryCells={boundaryCells}
             interactionMode={interactionMode}
             onFieldTap={handleFieldTap}
             onBoundaryStroke={handleBoundaryStroke}
             onRenderFramesPerSecond={setRenderFramesPerSecond}
           />
+          {wavefrontsRequested ? (
+            <p className="wavefront-legend">
+              {wavefrontsVisible ? (
+                <>
+                  <span className="legend-solid" aria-hidden="true" /> 山
+                  <span className="legend-dashed" aria-hidden="true" /> 谷
+                  <small>波源からまっすぐ届く波（理論）</small>
+                </>
+              ) : (
+                <small>壁があるので、波面の線はお休み中</small>
+              )}
+            </p>
+          ) : null}
           <div
             className="color-legend"
             aria-label="青は低い変位、緑は基準の0、赤は高い変位"
@@ -857,6 +880,15 @@ export function App() {
             <button type="button" role="menuitem" onClick={handleStep} disabled={controlsDisabled || isRunning}>
               <Icon name="step" />
               一歩だけ進める
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              aria-pressed={wavefrontsRequested}
+              onClick={() => setWavefrontsRequested((requested) => !requested)}
+            >
+              <Icon name="pulse" />
+              {wavefrontsRequested ? "波面の線を消す" : "波面の線（山＝実線・谷＝破線）"}
             </button>
             <button
               type="button"

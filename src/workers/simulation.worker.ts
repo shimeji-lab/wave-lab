@@ -16,6 +16,12 @@ import {
   secondsSinceMovingSourceRestart,
   type MovingSourceConfig,
 } from "../physics/movingSource";
+import {
+  detectWavefrontCrossings,
+  pruneWavefrontEvents,
+  wavefrontCircles,
+  type WavefrontEvent,
+} from "../physics/wavefronts";
 import { workerProtocolVersion, type WorkerCommand, type WorkerEvent } from "./protocol";
 import type { ContinuousSourceConfig } from "../simulation/types";
 import { scheduleSimulationSteps } from "./timing";
@@ -34,6 +40,10 @@ let performanceWindowStartedAt = performance.now();
 let performanceWindowStepCount = 0;
 let sourceTerm: Float32Array | undefined;
 let movingSource: MovingSourceConfig | undefined;
+// Crest and trough emission records for the theoretical wavefront overlay.
+// Recorded continuously so turning the overlay on shows waves already in flight.
+let wavefrontEvents: WavefrontEvent[] = [];
+let wavefrontsEnabled = false;
 let movingSourceStartedAt = 0;
 let activePulses: Array<{
   column: number;
@@ -78,6 +88,7 @@ function handleCommand(command: WorkerCommand): void {
       continuousSources = [];
       observer = undefined;
       movingSource = undefined;
+      wavefrontEvents = [];
       simulationStepCount = 0;
       playbackSpeed = 1;
       resetPerformanceWindow();
@@ -103,6 +114,7 @@ function handleCommand(command: WorkerCommand): void {
       continuousSources = [];
       observer = undefined;
       movingSource = undefined;
+      wavefrontEvents = [];
       activePulses = [];
       simulationStepCount = 0;
       resetPerformanceWindow();
@@ -146,6 +158,10 @@ function handleCommand(command: WorkerCommand): void {
       emitFrame();
       return;
     }
+    case "SET_WAVEFRONTS":
+      wavefrontsEnabled = command.enabled;
+      emitFrame();
+      return;
     case "CLEAR_OBSERVER":
       observer = undefined;
       return;
@@ -243,6 +259,7 @@ function advanceSimulationStep(): void {
     }
   }
 
+  recordWavefrontEvents(currentConfig, currentState.simulationTimeSeconds);
   const movingPosition = currentMovingSourcePosition(currentConfig);
 
   if (movingSource !== undefined && movingPosition !== undefined) {
@@ -326,6 +343,50 @@ function emitObservationSample(): void {
   });
 }
 
+function recordWavefrontEvents(currentConfig: SolverConfig, nowSeconds: number): void {
+  const nextSeconds = nowSeconds + currentConfig.timeStepSeconds;
+  const waveSpeed = currentConfig.waveSpeedCellsPerSecond;
+
+  if (continuousSourceEnabled) {
+    for (const source of continuousSources) {
+      if (!source.enabled) {
+        continue;
+      }
+
+      const omega = (2 * Math.PI * waveSpeed) / source.wavelengthCells;
+
+      for (const crossing of detectWavefrontCrossings(omega, source.phaseRadians, nowSeconds, nextSeconds)) {
+        wavefrontEvents.push({
+          emittedAt: crossing.time,
+          column: source.column,
+          row: source.row,
+          crest: crossing.crest,
+        });
+      }
+    }
+  }
+
+  if (movingSource !== undefined) {
+    const omega = (2 * Math.PI * waveSpeed) / movingSource.wavelengthCells;
+
+    for (const crossing of detectWavefrontCrossings(omega, 0, nowSeconds, nextSeconds)) {
+      const position = movingSourcePosition(
+        movingSource,
+        crossing.time - movingSourceStartedAt,
+        waveSpeed,
+      );
+      wavefrontEvents.push({ emittedAt: crossing.time, ...position, crest: crossing.crest });
+    }
+  }
+
+  wavefrontEvents = pruneWavefrontEvents(
+    wavefrontEvents,
+    nextSeconds,
+    waveSpeed,
+    Math.hypot(currentConfig.columns, currentConfig.rows),
+  );
+}
+
 function currentMovingSourcePosition(
   currentConfig: SolverConfig,
 ): { column: number; row: number } | undefined {
@@ -352,6 +413,13 @@ function emitFrame(): void {
     simulationTimeSeconds: currentState.simulationTimeSeconds,
     fieldBuffer,
     movingSourcePosition: currentMovingSourcePosition(currentConfig),
+    wavefronts: wavefrontsEnabled
+      ? wavefrontCircles(
+          wavefrontEvents,
+          currentState.simulationTimeSeconds,
+          currentConfig.waveSpeedCellsPerSecond,
+        )
+      : undefined,
     movingSourceSecondsSinceRestart:
       movingSource === undefined
         ? undefined

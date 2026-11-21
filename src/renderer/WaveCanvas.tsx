@@ -26,6 +26,7 @@ interface WaveCanvasProps {
   selectedSourceId?: string;
   sectionLine?: SectionLine;
   movingSourceActive?: boolean;
+  showWavefronts?: boolean;
   boundaryCells: BoundaryCell[];
   interactionMode: InteractionMode;
   onFieldTap: (column: number, row: number) => void;
@@ -43,6 +44,7 @@ export function WaveCanvas({
   selectedSourceId,
   sectionLine,
   movingSourceActive = false,
+  showWavefronts = false,
   boundaryCells,
   interactionMode,
   onFieldTap,
@@ -51,6 +53,7 @@ export function WaveCanvas({
 }: WaveCanvasProps) {
   const canvasReference = useRef<HTMLCanvasElement>(null);
   const movingMarkerReference = useRef<SVGGElement>(null);
+  const wavefrontLayerReference = useRef<SVGGElement>(null);
   const previousPointerCell = useRef<BoundaryCell | null>(null);
   const strokeCells = useRef<BoundaryCell[]>([]);
   // Presets such as the single slit use a row of sources to approximate a
@@ -109,6 +112,17 @@ export function WaveCanvas({
             "transform",
             `translate(${frame.movingSourcePosition.column + 0.5} ${frame.movingSourcePosition.row + 0.5})`,
           );
+        }
+
+        // Theoretical wavefront circles arrive with each frame. Writing the
+        // markup directly keeps dozens of circles cheap at frame rate.
+        if (wavefrontLayerReference.current !== null) {
+          wavefrontLayerReference.current.innerHTML = (frame.wavefronts ?? [])
+            .map(
+              (circle) =>
+                `<circle class="${circle.crest ? "wavefront-crest" : "wavefront-trough"}" cx="${(circle.column + 0.5).toFixed(2)}" cy="${(circle.row + 0.5).toFixed(2)}" r="${circle.radius.toFixed(2)}" />`,
+            )
+            .join("");
         }
 
         lastRenderedFrame = frame;
@@ -213,6 +227,7 @@ export function WaveCanvas({
             viewBox={`${visibleDomain.left} ${visibleDomain.top} ${visibleDomain.columns} ${visibleDomain.rows}`}
             aria-hidden="true"
           >
+            {showWavefronts ? <g ref={wavefrontLayerReference} className="wavefront-layer" /> : null}
             {sectionLine === undefined ? null : (
               <g className="section-line">
                 {sectionLine.orientation === "horizontal" ? (

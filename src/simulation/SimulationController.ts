@@ -1,4 +1,5 @@
 import type { MovingSourceConfig } from "../physics/movingSource";
+import type { WavefrontCircle } from "../physics/wavefronts";
 import type { BoundaryCell, SolverConfig } from "../physics/solver";
 import type { ContinuousSourceConfig } from "./types";
 import {
@@ -14,6 +15,7 @@ export interface SimulationFrame {
   simulationTimeSeconds: number;
   movingSourcePosition?: { column: number; row: number };
   movingSourceSecondsSinceRestart?: number;
+  wavefronts?: WavefrontCircle[];
 }
 
 export interface SimulationControllerCallbacks {
@@ -87,6 +89,10 @@ export class SimulationController {
     this.send({ version: workerProtocolVersion, type: "SET_MOVING_SOURCE", source, keepPosition });
   }
 
+  public setWavefronts(enabled: boolean): void {
+    this.send({ version: workerProtocolVersion, type: "SET_WAVEFRONTS", enabled });
+  }
+
   public clearObserver(): void {
     this.send({ version: workerProtocolVersion, type: "CLEAR_OBSERVER" });
   }
@@ -132,6 +138,7 @@ export class SimulationController {
           simulationTimeSeconds: event.simulationTimeSeconds,
           movingSourcePosition: event.movingSourcePosition,
           movingSourceSecondsSinceRestart: event.movingSourceSecondsSinceRestart,
+          wavefronts: event.wavefronts,
         });
         return;
       case "WARNING":

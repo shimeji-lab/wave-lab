@@ -84,6 +84,14 @@ the longer side of the field. Its panel offers four speeds (0.3, 0.6, 0.9 and
 1.3 times the wave speed), a cross-section along the path with the source
 position marked, and measured versus textbook wavelengths ahead and behind.
 
+Every graph has a "縦軸 ±3" button that cycles the shared vertical range
+through ±1, ±3, ±6 and ±12 (since 0.1.0-prototype.18).
+
+その他 → 波面の線 draws theoretical crest (solid) and trough (dashed) circles
+for waves that travel straight from continuous sources, with a legend chip at
+the top of the field. It pauses, with a note, while walls exist (since
+0.1.0-prototype.19).
+
 Panels (observation results, Doppler, cross-section, source settings) sit between the field and the
 tool dock. They never cover the field; the field shrinks to fit instead.
 Escape closes open panels and menus.

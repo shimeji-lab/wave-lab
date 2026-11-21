@@ -260,6 +260,57 @@ h1 {
   fill: #cbd5e1;
 }
 
+/* Theoretical wavefronts: crest = solid, trough = dashed (textbook style). */
+.wavefront-crest,
+.wavefront-trough {
+  fill: none;
+  stroke: #0f172a;
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+}
+
+.wavefront-trough {
+  stroke-dasharray: 5 4;
+  opacity: 0.85;
+}
+
+.wavefront-legend {
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 4px 10px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: rgb(248 250 252 / 88%);
+  color: #0f172a;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.wavefront-legend small {
+  color: #334155;
+  font-size: 0.62rem;
+  font-weight: 500;
+}
+
+.legend-solid,
+.legend-dashed {
+  display: inline-block;
+  width: 18px;
+  border-top: 2px solid #0f172a;
+}
+
+.legend-dashed {
+  border-top-style: dashed;
+}
+
 /* Cross-section line: white dashed line with a dark shadow so it reads on
    every wave colour. */
 .section-line-shadow {

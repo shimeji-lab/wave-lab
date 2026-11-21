@@ -2,6 +2,7 @@ import type { SolverConfig } from "../physics/solver";
 import type { BoundaryCell } from "../physics/solver";
 import type { ContinuousSourceConfig } from "../simulation/types";
 import type { MovingSourceConfig } from "../physics/movingSource";
+import type { WavefrontCircle } from "../physics/wavefronts";
 
 export const workerProtocolVersion = 1 as const;
 
@@ -16,6 +17,7 @@ export type WorkerCommand =
   | { version: typeof workerProtocolVersion; type: "SET_SPEED"; multiplier: 0.25 | 0.5 | 1 | 2 }
   | { version: typeof workerProtocolVersion; type: "SET_OBSERVER"; column: number; row: number }
   | { version: typeof workerProtocolVersion; type: "CLEAR_OBSERVER" }
+  | { version: typeof workerProtocolVersion; type: "SET_WAVEFRONTS"; enabled: boolean }
   | {
       version: typeof workerProtocolVersion;
       type: "SET_MOVING_SOURCE";
@@ -44,6 +46,7 @@ export type WorkerEvent =
       fieldBuffer: ArrayBuffer;
       movingSourcePosition?: { column: number; row: number };
       movingSourceSecondsSinceRestart?: number;
+      wavefronts?: WavefrontCircle[];
     }
   | { version: typeof workerProtocolVersion; type: "WARNING"; message: string }
   | {
