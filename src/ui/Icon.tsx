@@ -4,6 +4,7 @@ export type IconName =
   | "pulse"
   | "source"
   | "observer"
+  | "section"
   | "wall"
   | "slit"
   | "erase"
@@ -20,6 +21,7 @@ const paths: Record<IconName, string> = {
   pulse: "M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0 M12 12m-6 0a6 6 0 1 0 12 0a6 6 0 1 0 -12 0 M12 12m-10 0a10 10 0 1 0 20 0a10 10 0 1 0 -20 0",
   source: "M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0 M5.6 5.6a9 9 0 0 0 0 12.8 M18.4 5.6a9 9 0 0 1 0 12.8",
   observer: "M12 12m-5 0a5 5 0 1 0 10 0a5 5 0 1 0 -10 0 M12 2v5 M12 17v5 M2 12h5 M17 12h5",
+  section: "M3 11c2-4 4-4 6 0s4 4 6 0 4-4 6 0 M3 19h18 M3 17v4 M21 17v4",
   wall: "M4 20L20 4 M7 20L20 7 M4 17L17 4",
   slit: "M12 3v6 M12 15v6 M6 12h1 M17 12h1",
   erase: "M8 20h12 M5.5 14.5l8-8a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L11 19H8z",

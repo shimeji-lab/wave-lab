@@ -4,6 +4,8 @@ import {
   experimentPresets,
   type ExperimentPresetId,
 } from "../experiments/presets";
+import { CrossSectionPanel } from "../observation/CrossSectionPanel";
+import type { SectionLine, SectionOrientation } from "../observation/crossSection";
 import { ObservationPanel } from "../observation/ObservationPanel";
 import { createSingleSlitBoundaryCells } from "../physics/boundaries";
 import type { BoundaryCell, SolverConfig } from "../physics/solver";
@@ -37,16 +39,19 @@ type InteractionMode =
   | "sourceSelect"
   | "wall"
   | "slit"
-  | "erase";
-type Tool = "pulse" | "source" | "observer" | "wall" | "slit" | "erase";
+  | "erase"
+  | "section";
+// "壁を消す" (erase) lives inside the wall tool as a draw/erase switch so the
+// tool row keeps six entries on narrow phones.
+type Tool = "pulse" | "source" | "observer" | "section" | "wall" | "slit";
 
 const tools: Array<{ tool: Tool; label: string; icon: IconName }> = [
   { tool: "pulse", label: "波を起こす", icon: "pulse" },
   { tool: "source", label: "波源", icon: "source" },
   { tool: "observer", label: "観測点", icon: "observer" },
+  { tool: "section", label: "断面", icon: "section" },
   { tool: "wall", label: "壁", icon: "wall" },
   { tool: "slit", label: "スリット", icon: "slit" },
-  { tool: "erase", label: "壁を消す", icon: "erase" },
 ];
 const slitWidths = [12, 24, 36, 48];
 
@@ -82,6 +87,8 @@ export function App() {
   const [selectedSourceId, setSelectedSourceId] = useState<string>();
   const [slitWidthCells, setSlitWidthCells] = useState(24);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [sectionLine, setSectionLine] = useState<SectionLine>();
+  const [sectionOrientation, setSectionOrientation] = useState<SectionOrientation>("horizontal");
   const [editHistory, setEditHistory] = useState(createEditHistory);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [viewportDiagnostic, setViewportDiagnostic] = useState(readViewportDiagnostic);
@@ -154,6 +161,7 @@ export function App() {
     continuousSources,
     continuousSourceEnabled,
     observer,
+    sectionLine,
   });
 
   // Called immediately before a learner-visible placement change so that
@@ -194,6 +202,11 @@ export function App() {
     }
 
     setObserver(scene.observer);
+    setSectionLine(scene.sectionLine);
+
+    if (scene.sectionLine !== undefined) {
+      setSectionOrientation(scene.sectionLine.orientation);
+    }
   };
 
   const handleUndo = () => {
@@ -264,6 +277,7 @@ export function App() {
     setSelectedSourceId(undefined);
     setContinuousSourceEnabled(false);
     setObserver(undefined);
+    setSectionLine(undefined);
     pendingObservationSamplesReference.current = [];
     setObservationSamples([]);
     setObservationPanelOpen(false);
@@ -310,6 +324,12 @@ export function App() {
       setObserver({ column, row });
       setObservationSamples([]);
       setObservationPanelOpen(true);
+      return;
+    }
+
+    if (interactionMode === "section") {
+      commitEdit();
+      setSectionLine({ orientation: sectionOrientation, column, row });
       return;
     }
 
@@ -450,6 +470,7 @@ export function App() {
     setSelectedSourceId(undefined);
     setContinuousSourceEnabled(preset.sources.length > 0);
     setObserver(undefined);
+    setSectionLine(undefined);
     pendingObservationSamplesReference.current = [];
     setObservationSamples([]);
     setObservationPanelOpen(false);
@@ -517,7 +538,21 @@ export function App() {
   const controlsDisabled = simulationStatus === "loading" || simulationStatus === "error";
   const selectedSource = continuousSources.find((source) => source.id === selectedSourceId);
 
-  const activeTool: Tool = interactionMode === "sourceSelect" ? "source" : interactionMode;
+  const activeTool: Tool =
+    interactionMode === "sourceSelect"
+      ? "source"
+      : interactionMode === "erase"
+        ? "wall"
+        : interactionMode;
+
+  const changeSectionOrientation = (orientation: SectionOrientation) => {
+    setSectionOrientation(orientation);
+
+    if (sectionLine !== undefined && sectionLine.orientation !== orientation) {
+      commitEdit();
+      setSectionLine({ ...sectionLine, orientation });
+    }
+  };
   const canUndo = editHistory.entries.length > 0;
   const selectedSourceNumber =
     selectedSource === undefined ? 0 : continuousSources.indexOf(selectedSource) + 1;
@@ -557,6 +592,7 @@ export function App() {
             observer={observer}
             continuousSources={continuousSources}
             selectedSourceId={selectedSourceId}
+            sectionLine={sectionLine}
             boundaryCells={boundaryCells}
             interactionMode={interactionMode}
             onFieldTap={handleFieldTap}
@@ -578,7 +614,7 @@ export function App() {
       </section>
 
       <div className="sheet-area">
-        {observer === undefined && selectedSource === undefined ? (
+        {observer === undefined && selectedSource === undefined && sectionLine === undefined ? (
           <p className="sheet-placeholder">
             観測点を置くと、ここに波の高さのグラフが出ます。波源をタップすると、ここで設定できます。
           </p>
@@ -589,6 +625,18 @@ export function App() {
             observer={observer}
             samples={observationSamples}
             onToggle={() => setObservationPanelOpen((open) => !open)}
+          />
+        )}
+
+        {sectionLine === undefined || selectedSource !== undefined ? null : (
+          <CrossSectionPanel
+            frameReference={latestFrameReference}
+            absorptionLayerCells={solverConfig.absorptionLayerCells}
+            line={sectionLine}
+            onRemove={() => {
+              commitEdit();
+              setSectionLine(undefined);
+            }}
           />
         )}
 
@@ -647,9 +695,44 @@ export function App() {
                 ))}
               </div>
             ) : null}
-            {(activeTool === "wall" || activeTool === "erase") && boundaryCells.length > 0 ? (
+            {activeTool === "section" ? (
+              <div className="segmented" role="group" aria-label="断面の向き">
+                {(["horizontal", "vertical"] as SectionOrientation[]).map((orientation) => (
+                  <button
+                    key={orientation}
+                    type="button"
+                    className={sectionOrientation === orientation ? "selected" : ""}
+                    aria-pressed={sectionOrientation === orientation}
+                    onClick={() => changeSectionOrientation(orientation)}
+                  >
+                    {orientation === "horizontal" ? "横" : "縦"}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {activeTool === "wall" ? (
+              <div className="segmented" role="group" aria-label="壁の描き方">
+                <button
+                  type="button"
+                  className={interactionMode === "wall" ? "selected" : ""}
+                  aria-pressed={interactionMode === "wall"}
+                  onClick={() => setInteractionMode("wall")}
+                >
+                  描く
+                </button>
+                <button
+                  type="button"
+                  className={interactionMode === "erase" ? "selected" : ""}
+                  aria-pressed={interactionMode === "erase"}
+                  onClick={() => setInteractionMode("erase")}
+                >
+                  消す
+                </button>
+              </div>
+            ) : null}
+            {activeTool === "wall" && boundaryCells.length > 0 ? (
               <button type="button" className="chip-control danger-chip" onClick={handleBoundaryReset}>
-                壁を全部消す
+                全部消す
               </button>
             ) : null}
           </div>
@@ -792,6 +875,8 @@ function fieldTitleForMode(mode: InteractionMode): string {
       return "タップした高さにすき間のある壁を置く";
     case "erase":
       return "なぞった所の壁を消す";
+    case "section":
+      return "タップした所を通る線で、波を横から見る";
   }
 }
 

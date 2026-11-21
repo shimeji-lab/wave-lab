@@ -64,8 +64,9 @@ The tool dock has three rows (since 0.1.0-prototype.14):
 1. Context bar: a persistent one-line hint for the active tool plus only the
    controls that tool needs (slit width, continuous-wave toggle, clear walls,
    observation graph toggle). The hint briefly flashes when a tap is ignored.
-2. Tool row: six icon + label tools (波を起こす, 波源, 観測点, 壁, スリット,
-   壁を消す). The active tool is highlighted.
+2. Tool row: six icon + label tools (波を起こす, 波源, 観測点, 断面, 壁,
+   スリット). The active tool is highlighted. Since 0.1.0-prototype.16 wall
+   erasing is a 描く/消す switch inside the 壁 tool.
 3. Action row: 実験 (gallery), 戻す (undo), 再生/一時停止, 速さ, その他
    (single step, monochrome, diagnostics, full reset).
 
@@ -73,7 +74,12 @@ The tool dock has three rows (since 0.1.0-prototype.14):
 the observation point. It does not rewind the wave field itself. Consecutive
 slider changes on one source count as one undo step.
 
-Panels (observation results, source settings) sit between the field and the
+断面 (cross-section) draws a horizontal or vertical line through the tapped
+cell and graphs the current displacement along it with the same fixed vertical
+scale as the observation graph. It reads the solver's latest frame only; it
+does not compute physics. Diagonal lines are intentionally not supported.
+
+Panels (observation results, cross-section, source settings) sit between the field and the
 tool dock. They never cover the field; the field shrinks to fit instead.
 Escape closes open panels and menus.
 

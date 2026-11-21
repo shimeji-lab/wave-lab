@@ -1,4 +1,5 @@
 import type { BoundaryCell } from "../physics/solver";
+import type { SectionLine } from "../observation/crossSection";
 import type { ContinuousSourceConfig } from "../simulation/types";
 
 // Undo restores what the learner placed in the experiment (walls, sources and
@@ -10,6 +11,7 @@ export interface SceneSnapshot {
   continuousSources: ContinuousSourceConfig[];
   continuousSourceEnabled: boolean;
   observer: { column: number; row: number } | undefined;
+  sectionLine: SectionLine | undefined;
 }
 
 export interface EditHistory {

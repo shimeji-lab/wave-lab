@@ -204,7 +204,8 @@ h1 {
 }
 
 .field-marker-overlay circle,
-.field-marker-overlay path {
+.field-marker-overlay path,
+.field-marker-overlay line {
   vector-effect: non-scaling-stroke;
 }
 
@@ -257,6 +258,20 @@ h1 {
 
 .source-marker.disabled .source-marker-label {
   fill: #cbd5e1;
+}
+
+/* Cross-section line: white dashed line with a dark shadow so it reads on
+   every wave colour. */
+.section-line-shadow {
+  stroke: #0f172a;
+  stroke-width: 4;
+  opacity: 0.45;
+}
+
+.section-line-main {
+  stroke: #ffffff;
+  stroke-width: 2;
+  stroke-dasharray: 8 5;
 }
 
 /* Observation point: orange target that matches the graph line colour. */
@@ -440,6 +455,67 @@ h1 {
 
 .measurement-note {
   padding-top: 4px;
+}
+
+.cross-section-panel {
+  padding: 8px 14px 8px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.cross-section-panel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.cross-section-panel header div {
+  display: grid;
+  gap: 1px;
+  font-size: 0.85rem;
+}
+
+.cross-section-panel header span {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.cross-section-panel header button {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+}
+
+.cross-section-graph {
+  display: block;
+  width: 100%;
+  height: clamp(64px, 11dvh, 110px);
+  margin-top: 6px;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.cross-section-line {
+  fill: none;
+  stroke: #2563eb;
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.cross-section-graph .waveform-zero {
+  vector-effect: non-scaling-stroke;
+}
+
+.cross-section-axis {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 3px 0 0;
+  color: var(--text-muted);
+  font-size: 0.66rem;
 }
 
 .source-settings-panel {
@@ -863,6 +939,7 @@ h1 {
   .tool-row,
   .action-row,
   .observation-content,
+  .cross-section-panel > *,
   .source-settings-panel > * {
     width: min(720px, 100%);
     margin-inline: auto;
@@ -911,6 +988,11 @@ h1 {
 
   .sheet-placeholder {
     display: block;
+  }
+
+  .waveform-graph,
+  .cross-section-graph {
+    height: clamp(90px, 20dvh, 170px);
   }
 
   .context-bar {

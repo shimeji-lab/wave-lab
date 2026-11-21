@@ -2,6 +2,7 @@ import { useEffect, useRef, type RefObject } from "react";
 import type { BoundaryCell } from "../physics/solver";
 import type { SimulationFrame } from "../simulation/SimulationController";
 import type { ContinuousSourceConfig } from "../simulation/types";
+import type { SectionLine } from "../observation/crossSection";
 import { writeDisplacementColors } from "./colorScale";
 import { cellInVisibleDomain, createVisibleDomain } from "./visibleDomain";
 
@@ -12,7 +13,8 @@ type InteractionMode =
   | "sourceSelect"
   | "wall"
   | "slit"
-  | "erase";
+  | "erase"
+  | "section";
 
 interface WaveCanvasProps {
   frameReference: RefObject<SimulationFrame | undefined>;
@@ -22,6 +24,7 @@ interface WaveCanvasProps {
   observer: { column: number; row: number } | undefined;
   continuousSources: ContinuousSourceConfig[];
   selectedSourceId?: string;
+  sectionLine?: SectionLine;
   boundaryCells: BoundaryCell[];
   interactionMode: InteractionMode;
   onFieldTap: (column: number, row: number) => void;
@@ -37,6 +40,7 @@ export function WaveCanvas({
   observer,
   continuousSources,
   selectedSourceId,
+  sectionLine,
   boundaryCells,
   interactionMode,
   onFieldTap,
@@ -197,6 +201,45 @@ export function WaveCanvas({
             viewBox={`${visibleDomain.left} ${visibleDomain.top} ${visibleDomain.columns} ${visibleDomain.rows}`}
             aria-hidden="true"
           >
+            {sectionLine === undefined ? null : (
+              <g className="section-line">
+                {sectionLine.orientation === "horizontal" ? (
+                  <>
+                    <line
+                      className="section-line-shadow"
+                      x1={visibleDomain.left}
+                      x2={visibleDomain.left + visibleDomain.columns}
+                      y1={sectionLine.row + 0.5}
+                      y2={sectionLine.row + 0.5}
+                    />
+                    <line
+                      className="section-line-main"
+                      x1={visibleDomain.left}
+                      x2={visibleDomain.left + visibleDomain.columns}
+                      y1={sectionLine.row + 0.5}
+                      y2={sectionLine.row + 0.5}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <line
+                      className="section-line-shadow"
+                      x1={sectionLine.column + 0.5}
+                      x2={sectionLine.column + 0.5}
+                      y1={visibleDomain.top}
+                      y2={visibleDomain.top + visibleDomain.rows}
+                    />
+                    <line
+                      className="section-line-main"
+                      x1={sectionLine.column + 0.5}
+                      x2={sectionLine.column + 0.5}
+                      y1={visibleDomain.top}
+                      y2={visibleDomain.top + visibleDomain.rows}
+                    />
+                  </>
+                )}
+              </g>
+            )}
             {/* Marker sizes are in grid cells so they scale with the field;
                 strokes use non-scaling-stroke to stay crisp at any zoom. */}
             {continuousSources.map((source, index) => (
@@ -337,5 +380,7 @@ function fieldLabel(mode: InteractionMode): string {
       return "波の実験フィールド。タップして単スリットを置きます。";
     case "erase":
       return "波の実験フィールド。ドラッグして壁を消します。";
+    case "section":
+      return "波の実験フィールド。タップした所を通る断面の線を引きます。";
   }
 }
