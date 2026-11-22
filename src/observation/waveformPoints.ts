@@ -15,6 +15,7 @@ export function createWaveformPoints(
   samples: ObservationSample[],
   timeWindowSeconds = waveformTimeWindowSeconds,
   amplitudeScale = 3,
+  valueOf: (sample: ObservationSample) => number = (sample) => sample.displacement,
 ): string {
   const latestSample = samples.at(-1);
 
@@ -37,7 +38,7 @@ export function createWaveformPoints(
         ((sample.simulationTimeSeconds - windowStartSeconds) / timeWindowSeconds) * graphWidth;
       const normalizedDisplacement = Math.max(
         -1,
-        Math.min(1, sample.displacement / amplitudeScale),
+        Math.min(1, valueOf(sample) / amplitudeScale),
       );
       const y = graphCenterY - normalizedDisplacement * graphHalfHeight;
       return `${x.toFixed(1)},${y.toFixed(1)}`;

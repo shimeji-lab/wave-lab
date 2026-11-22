@@ -140,6 +140,29 @@ solver's field, never a replacement for it.
 - Pulses are not drawn. Walls reflect and block waves, so the overlay pauses
   while any wall exists.
 
+### Superposition mode (since 0.1.0-prototype.20)
+
+The superposition experiment shows 波源1 alone, 波源2 alone and their sum
+(`src/physics/superposition.ts`).
+
+- The Worker keeps one extra solver per source. Each is driven only by its own
+  source; the displayed field is built as part 1 + part 2 rather than stepped
+  separately. Because the update is linear (sources, damping, fixed walls and
+  the absorbing edge), this equals the two-source solution.
+- Validation (`superposition.test.ts`): after 240 steps with two different
+  sources and a wall, part 1 + part 2 matches a direct two-source run within
+  1e-4.
+- Turning the mode on starts from a still field so the identity holds from the
+  first frame. Pulses and the moving source are not part of this mode.
+
+### Medium damping levels (since 0.1.0-prototype.20)
+
+The interior damping `d` can be chosen as なし 0, 弱 0.005 (the previous fixed
+value), 中 0.02 or 強 0.06 per second (`src/physics/damping.ts`). Theory for
+u_tt + d u_t = c² ∇²u gives an extra spatial decay exp(−d r / 2c). The solver
+measures exponents ×1.20 (弱, 中) and ×1.06 (強) of that, so a wave loses half
+its amplitude to damping after about 230, 58 and 22 cells respectively.
+
 ## 5. Boundaries
 
 Required for v0.1:

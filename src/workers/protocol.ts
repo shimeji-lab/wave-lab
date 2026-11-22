@@ -18,6 +18,9 @@ export type WorkerCommand =
   | { version: typeof workerProtocolVersion; type: "SET_OBSERVER"; column: number; row: number }
   | { version: typeof workerProtocolVersion; type: "CLEAR_OBSERVER" }
   | { version: typeof workerProtocolVersion; type: "SET_WAVEFRONTS"; enabled: boolean }
+  // Superposition mode: also compute 波源1 alone and 波源2 alone.
+  | { version: typeof workerProtocolVersion; type: "SET_SUPERPOSITION"; enabled: boolean }
+  | { version: typeof workerProtocolVersion; type: "SET_DAMPING"; dampingPerSecond: number }
   | {
       version: typeof workerProtocolVersion;
       type: "SET_MOVING_SOURCE";
@@ -47,6 +50,8 @@ export type WorkerEvent =
       movingSourcePosition?: { column: number; row: number };
       movingSourceSecondsSinceRestart?: number;
       wavefronts?: WavefrontCircle[];
+      // Superposition mode only: the fields of 波源1 alone and 波源2 alone.
+      componentBuffers?: [ArrayBuffer, ArrayBuffer];
     }
   | { version: typeof workerProtocolVersion; type: "WARNING"; message: string }
   | {
@@ -62,5 +67,6 @@ export type WorkerEvent =
       row: number;
       simulationTimeSeconds: number;
       displacement: number;
+      components?: [number, number];
     }
   | { version: typeof workerProtocolVersion; type: "ERROR"; message: string };

@@ -311,6 +311,207 @@ h1 {
   border-top-style: dashed;
 }
 
+/* ---------- Superposition mode: 波源1 = red, 波源2 = blue, 合成 = black ---------- */
+
+.wavefront-halo {
+  stroke: rgb(255 255 255 / 85%);
+  stroke-width: 3.6;
+  opacity: 1;
+}
+
+.wavefront-tone-0 {
+  stroke: #e11d48;
+  stroke-width: 1.8;
+  opacity: 1;
+}
+
+.wavefront-tone-1 {
+  stroke: #1d4ed8;
+  stroke-width: 1.8;
+  opacity: 1;
+}
+
+.source-marker.source-tone-0 .source-marker-dot {
+  fill: #e11d48;
+}
+
+.source-marker.source-tone-1 .source-marker-dot {
+  fill: #1d4ed8;
+}
+
+.source-marker.dimmed {
+  opacity: 0.45;
+}
+
+.superposition-view-switch {
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgb(248 250 252 / 92%);
+  border-color: rgb(15 23 42 / 25%);
+}
+
+.superposition-view-switch button {
+  min-height: 30px;
+  padding: 0 10px;
+  color: #334155;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.superposition-view-switch button::before {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-radius: 50%;
+  content: "";
+  vertical-align: 1px;
+}
+
+.superposition-view-switch .view-sum::before {
+  background: #0f172a;
+}
+
+.superposition-view-switch .view-tone-0::before {
+  background: #e11d48;
+}
+
+.superposition-view-switch .view-tone-1::before {
+  background: #1d4ed8;
+}
+
+.superposition-view-switch button.selected {
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.superposition-view-switch button.selected.view-sum::before {
+  background: #ffffff;
+}
+
+.superposition-panel {
+  padding: 8px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.superposition-panel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.superposition-panel header div {
+  display: grid;
+  gap: 2px;
+  font-size: 0.85rem;
+}
+
+.superposition-panel header button {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+}
+
+.superposition-key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 4px;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+.key-swatch {
+  display: inline-block;
+  width: 16px;
+  height: 3px;
+  margin-left: 4px;
+  border-radius: 2px;
+}
+
+.key-swatch.tone-0 {
+  background: #fb7185;
+}
+
+.key-swatch.tone-1 {
+  background: #60a5fa;
+}
+
+.key-swatch.sum {
+  height: 4px;
+  background: #f8fafc;
+}
+
+.superposition-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.chip-control.active {
+  background: var(--accent-strong);
+  color: #04111d;
+}
+
+.component-line {
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.9;
+}
+
+.component-line.tone-0 {
+  stroke: #e11d48;
+}
+
+.component-line.tone-1 {
+  stroke: #1d4ed8;
+}
+
+.waveform-line.sum-line,
+.cross-section-line.sum-line {
+  stroke: #0f172a;
+  stroke-width: 2.6;
+}
+
+.observation-values .component-values strong {
+  font-size: 0.85rem;
+}
+
+.component-values em {
+  font-style: normal;
+}
+
+.component-values em.tone-0 {
+  color: #fb7185;
+}
+
+.component-values em.tone-1 {
+  color: #60a5fa;
+}
+
+.tool-row.four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.tool-button.tone-0 .icon {
+  color: #fb7185;
+}
+
+.tool-button.tone-1 .icon {
+  color: #60a5fa;
+}
+
 /* Cross-section line: white dashed line with a dark shadow so it reads on
    every wave colour. */
 .section-line-shadow {
@@ -403,6 +604,12 @@ h1 {
 .sheet-area {
   grid-area: sheet;
   min-height: 0;
+  /* Several panels (for example superposition controls + observation graph +
+     cross-section graph) must not squeeze the wave field away on a phone:
+     beyond this height the sheet scrolls instead. */
+  max-height: 42dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .sheet-placeholder {
@@ -1125,6 +1332,7 @@ h1 {
   }
 
   .sheet-area {
+    max-height: none;
     overflow: auto;
     border-left: 1px solid var(--line);
     background: var(--surface);
@@ -1158,6 +1366,10 @@ h1 {
 
   .tool-row {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .tool-row.four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .tool-button {

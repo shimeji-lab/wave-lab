@@ -10,7 +10,8 @@ interface SourceSettingsPanelProps {
   visibleInsetCells: number;
   waveSpeedCellsPerSecond: number;
   onChange: (source: ContinuousSourceConfig) => void;
-  onDelete: (sourceId: string) => void;
+  // Omitted in superposition mode, which always keeps 波源1 and 波源2.
+  onDelete?: (sourceId: string) => void;
   onClose: () => void;
 }
 
@@ -118,9 +119,11 @@ export function SourceSettingsPanel({
         </small>
       </section>
 
-      <button type="button" className="danger-control" onClick={() => onDelete(source.id)}>
-        この波源を削除
-      </button>
+      {onDelete === undefined ? null : (
+        <button type="button" className="danger-control" onClick={() => onDelete(source.id)}>
+          この波源を削除
+        </button>
+      )}
     </aside>
   );
 }

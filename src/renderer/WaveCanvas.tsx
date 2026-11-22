@@ -14,7 +14,12 @@ type InteractionMode =
   | "wall"
   | "slit"
   | "erase"
-  | "section";
+  | "section"
+  | "placeSource1"
+  | "placeSource2";
+
+// Superposition mode: which field to show (合成 = sum, 0 = 波源1, 1 = 波源2).
+export type SuperpositionView = "sum" | 0 | 1;
 
 interface WaveCanvasProps {
   frameReference: RefObject<SimulationFrame | undefined>;
@@ -27,6 +32,7 @@ interface WaveCanvasProps {
   sectionLine?: SectionLine;
   movingSourceActive?: boolean;
   showWavefronts?: boolean;
+  superpositionView?: SuperpositionView;
   boundaryCells: BoundaryCell[];
   interactionMode: InteractionMode;
   onFieldTap: (column: number, row: number) => void;
@@ -45,6 +51,7 @@ export function WaveCanvas({
   sectionLine,
   movingSourceActive = false,
   showWavefronts = false,
+  superpositionView,
   boundaryCells,
   interactionMode,
   onFieldTap,
@@ -97,7 +104,11 @@ export function WaveCanvas({
           image = context.createImageData(frame.columns, frame.rows);
         }
 
-        writeDisplacementColors(image.data, frame.field, displayMode);
+        const shownField =
+          typeof superpositionView === "number" && frame.components !== undefined
+            ? frame.components[superpositionView]
+            : frame.field;
+        writeDisplacementColors(image.data, shownField, displayMode);
         context.putImageData(image, -domain.left, -domain.top);
         context.fillStyle = "#1e293b";
 
@@ -118,10 +129,22 @@ export function WaveCanvas({
         // markup directly keeps dozens of circles cheap at frame rate.
         if (wavefrontLayerReference.current !== null) {
           wavefrontLayerReference.current.innerHTML = (frame.wavefronts ?? [])
-            .map(
+            .filter(
               (circle) =>
-                `<circle class="${circle.crest ? "wavefront-crest" : "wavefront-trough"}" cx="${(circle.column + 0.5).toFixed(2)}" cy="${(circle.row + 0.5).toFixed(2)}" r="${circle.radius.toFixed(2)}" />`,
+                typeof superpositionView !== "number" || circle.sourceIndex === superpositionView,
             )
+            .map((circle) => {
+              const geometry = `cx="${(circle.column + 0.5).toFixed(2)}" cy="${(circle.row + 0.5).toFixed(2)}" r="${circle.radius.toFixed(2)}"`;
+              const kind = circle.crest ? "wavefront-crest" : "wavefront-trough";
+
+              if (superpositionView === undefined) {
+                return `<circle class="${kind}" ${geometry} />`;
+              }
+
+              // Coloured per source; a white halo keeps the line readable on
+              // top of the coloured field.
+              return `<circle class="${kind} wavefront-halo" ${geometry} /><circle class="${kind} wavefront-tone-${circle.sourceIndex}" ${geometry} />`;
+            })
             .join("");
         }
 
@@ -144,7 +167,14 @@ export function WaveCanvas({
     animationFrameId = requestAnimationFrame(drawLatestFrame);
 
     return () => cancelAnimationFrame(animationFrameId);
-  }, [absorptionLayerCells, boundaryCells, displayMode, frameReference, onRenderFramesPerSecond]);
+  }, [
+    absorptionLayerCells,
+    boundaryCells,
+    displayMode,
+    frameReference,
+    onRenderFramesPerSecond,
+    superpositionView,
+  ]);
 
   const handlePointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const cell = cellFromPointer(event, visibleDomain);
@@ -277,6 +307,8 @@ export function WaveCanvas({
                   compactSources ? "compact" : "",
                   source.enabled ? "" : "disabled",
                   source.id === selectedSourceId ? "selected" : "",
+                  superpositionView !== undefined && index < 2 ? `source-tone-${index}` : "",
+                  typeof superpositionView === "number" && superpositionView !== index ? "dimmed" : "",
                 ].filter(Boolean).join(" ")}
                 transform={`translate(${source.column + 0.5} ${source.row + 0.5})`}
               >
@@ -415,5 +447,9 @@ function fieldLabel(mode: InteractionMode): string {
       return "波の実験フィールド。ドラッグして壁を消します。";
     case "section":
       return "波の実験フィールド。タップした所を通る断面の線を引きます。";
+    case "placeSource1":
+      return "波の実験フィールド。タップした所へ波源1を動かします。";
+    case "placeSource2":
+      return "波の実験フィールド。タップした所へ波源2を動かします。";
   }
 }

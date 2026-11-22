@@ -10,6 +10,12 @@ import {
 } from "../physics/solver";
 import { addGaussianSourceTerm, rickerWavelet } from "../physics/sources";
 import {
+  combineSuperpositionParts,
+  createSuperpositionParts,
+  type SuperpositionParts,
+} from "../physics/superposition";
+import type { BoundaryCell } from "../physics/solver";
+import {
   movingSourceAxisPosition,
   movingSourcePosition,
   movingSourceStrength,
@@ -44,6 +50,10 @@ let movingSource: MovingSourceConfig | undefined;
 // Recorded continuously so turning the overlay on shows waves already in flight.
 let wavefrontEvents: WavefrontEvent[] = [];
 let wavefrontsEnabled = false;
+// Superposition mode: one solver per source (波源1, 波源2). The main state then
+// holds their sum; see physics/superposition.ts.
+let superpositionParts: SuperpositionParts | undefined;
+let boundaryCells: BoundaryCell[] = [];
 let movingSourceStartedAt = 0;
 let activePulses: Array<{
   column: number;
@@ -89,6 +99,8 @@ function handleCommand(command: WorkerCommand): void {
       observer = undefined;
       movingSource = undefined;
       wavefrontEvents = [];
+      superpositionParts = undefined;
+      boundaryCells = [];
       simulationStepCount = 0;
       playbackSpeed = 1;
       resetPerformanceWindow();
@@ -115,6 +127,8 @@ function handleCommand(command: WorkerCommand): void {
       observer = undefined;
       movingSource = undefined;
       wavefrontEvents = [];
+      superpositionParts = undefined;
+      boundaryCells = [];
       activePulses = [];
       simulationStepCount = 0;
       resetPerformanceWindow();
@@ -158,6 +172,34 @@ function handleCommand(command: WorkerCommand): void {
       emitFrame();
       return;
     }
+    case "SET_SUPERPOSITION": {
+      const currentState = requireState();
+
+      if (command.enabled) {
+        // Start from a still field so that 合成 = 波源1 + 波源2 holds from the
+        // first frame. Time keeps running so source phases stay continuous.
+        currentState.previous.fill(0);
+        currentState.current.fill(0);
+        currentState.next.fill(0);
+        superpositionParts = createSuperpositionParts(
+          requireConfig(),
+          currentState.simulationTimeSeconds,
+          boundaryCells,
+        );
+        activePulses = [];
+        wavefrontEvents = [];
+      } else {
+        superpositionParts = undefined;
+      }
+
+      emitFrame();
+      emitObservationSample();
+      return;
+    }
+    case "SET_DAMPING":
+      // The solver reads the damping from the config on every step.
+      requireConfig().dampingPerSecond = Math.max(0, command.dampingPerSecond);
+      return;
     case "SET_WAVEFRONTS":
       wavefrontsEnabled = command.enabled;
       emitFrame();
@@ -166,7 +208,13 @@ function handleCommand(command: WorkerCommand): void {
       observer = undefined;
       return;
     case "SET_BOUNDARIES":
+      boundaryCells = command.cells;
       setFixedBoundaryCells(requireState(), requireConfig(), command.cells);
+
+      for (const part of superpositionParts ?? []) {
+        setFixedBoundaryCells(part, requireConfig(), command.cells);
+      }
+
       emitFrame();
       return;
     case "INJECT_PULSE":
@@ -236,30 +284,21 @@ function advanceSimulationStep(): void {
   const currentState = requireState();
   const currentConfig = requireConfig();
   const currentSourceTerm = requireSourceTerm();
+  recordWavefrontEvents(currentConfig, currentState.simulationTimeSeconds);
+
+  if (superpositionParts !== undefined) {
+    advanceSuperpositionStep(currentState, currentConfig, currentSourceTerm, superpositionParts);
+    return;
+  }
+
   currentSourceTerm.fill(0);
 
   if (continuousSourceEnabled) {
     for (const source of continuousSources) {
-      if (!source.enabled) {
-        continue;
-      }
-
-      const sourceAngularFrequency =
-        (2 * Math.PI * currentConfig.waveSpeedCellsPerSecond) / source.wavelengthCells;
-      const sourceAmplitude =
-        Math.sin(currentState.simulationTimeSeconds * sourceAngularFrequency + source.phaseRadians) *
-        source.amplitude;
-      addGaussianSourceTerm(
-        currentSourceTerm,
-        currentConfig,
-        source.column,
-        source.row,
-        sourceAmplitude,
-      );
+      addContinuousSourceTerm(currentSourceTerm, currentConfig, source, currentState.simulationTimeSeconds);
     }
   }
 
-  recordWavefrontEvents(currentConfig, currentState.simulationTimeSeconds);
   const movingPosition = currentMovingSourcePosition(currentConfig);
 
   if (movingSource !== undefined && movingPosition !== undefined) {
@@ -294,12 +333,53 @@ function advanceSimulationStep(): void {
   );
 
   stepSolver(currentState, currentConfig, currentSourceTerm);
+  finishStep();
+}
+
+function finishStep(): void {
   simulationStepCount += 1;
   performanceWindowStepCount += 1;
 
   if (simulationStepCount % 3 === 0) {
     emitObservationSample();
   }
+}
+
+// Each source drives its own solver; the shown field is their sum. Pulses and
+// the moving source are not part of this mode.
+function advanceSuperpositionStep(
+  currentState: SolverState,
+  currentConfig: SolverConfig,
+  currentSourceTerm: Float32Array,
+  parts: SuperpositionParts,
+): void {
+  parts.forEach((part, index) => {
+    currentSourceTerm.fill(0);
+    const source = continuousSources[index];
+
+    if (continuousSourceEnabled && source !== undefined) {
+      addContinuousSourceTerm(currentSourceTerm, currentConfig, source, currentState.simulationTimeSeconds);
+    }
+
+    stepSolver(part, currentConfig, currentSourceTerm);
+  });
+  combineSuperpositionParts(currentState, parts);
+  finishStep();
+}
+
+function addContinuousSourceTerm(
+  target: Float32Array,
+  currentConfig: SolverConfig,
+  source: ContinuousSourceConfig,
+  timeSeconds: number,
+): void {
+  if (!source.enabled) {
+    return;
+  }
+
+  const angularFrequency = (2 * Math.PI * currentConfig.waveSpeedCellsPerSecond) / source.wavelengthCells;
+  const strength = Math.sin(timeSeconds * angularFrequency + source.phaseRadians) * source.amplitude;
+  addGaussianSourceTerm(target, currentConfig, source.column, source.row, strength);
 }
 
 function emitPerformanceIfReady(currentConfig: SolverConfig): void {
@@ -340,6 +420,10 @@ function emitObservationSample(): void {
     row: observer.row,
     simulationTimeSeconds: currentState.simulationTimeSeconds,
     displacement: currentState.current[index],
+    components:
+      superpositionParts === undefined
+        ? undefined
+        : [superpositionParts[0].current[index], superpositionParts[1].current[index]],
   });
 }
 
@@ -348,9 +432,9 @@ function recordWavefrontEvents(currentConfig: SolverConfig, nowSeconds: number):
   const waveSpeed = currentConfig.waveSpeedCellsPerSecond;
 
   if (continuousSourceEnabled) {
-    for (const source of continuousSources) {
-      if (!source.enabled) {
-        continue;
+    continuousSources.forEach((source, sourceIndex) => {
+      if (!source.enabled || (superpositionParts !== undefined && sourceIndex > 1)) {
+        return;
       }
 
       const omega = (2 * Math.PI * waveSpeed) / source.wavelengthCells;
@@ -361,12 +445,13 @@ function recordWavefrontEvents(currentConfig: SolverConfig, nowSeconds: number):
           column: source.column,
           row: source.row,
           crest: crossing.crest,
+          sourceIndex,
         });
       }
-    }
+    });
   }
 
-  if (movingSource !== undefined) {
+  if (movingSource !== undefined && superpositionParts === undefined) {
     const omega = (2 * Math.PI * waveSpeed) / movingSource.wavelengthCells;
 
     for (const crossing of detectWavefrontCrossings(omega, 0, nowSeconds, nextSeconds)) {
@@ -375,7 +460,12 @@ function recordWavefrontEvents(currentConfig: SolverConfig, nowSeconds: number):
         crossing.time - movingSourceStartedAt,
         waveSpeed,
       );
-      wavefrontEvents.push({ emittedAt: crossing.time, ...position, crest: crossing.crest });
+      wavefrontEvents.push({
+        emittedAt: crossing.time,
+        ...position,
+        crest: crossing.crest,
+        sourceIndex: -1,
+      });
     }
   }
 
@@ -405,6 +495,10 @@ function emitFrame(): void {
   const currentState = requireState();
   const currentConfig = requireConfig();
   const fieldBuffer = currentState.current.slice().buffer;
+  const componentBuffers: [ArrayBuffer, ArrayBuffer] | undefined =
+    superpositionParts === undefined
+      ? undefined
+      : [superpositionParts[0].current.slice().buffer, superpositionParts[1].current.slice().buffer];
   const event: WorkerEvent = {
     version: workerProtocolVersion,
     type: "FRAME",
@@ -420,6 +514,7 @@ function emitFrame(): void {
           currentConfig.waveSpeedCellsPerSecond,
         )
       : undefined,
+    componentBuffers,
     movingSourceSecondsSinceRestart:
       movingSource === undefined
         ? undefined
@@ -432,7 +527,7 @@ function emitFrame(): void {
 
   // The renderer must not receive the Worker-owned solver array. Copying is
   // intentional for this prototype and will be profiled before optimization.
-  self.postMessage(event, [fieldBuffer]);
+  self.postMessage(event, [fieldBuffer, ...(componentBuffers ?? [])]);
 }
 
 function requireState(): SolverState {

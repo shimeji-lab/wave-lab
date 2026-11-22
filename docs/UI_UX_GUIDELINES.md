@@ -92,6 +92,19 @@ for waves that travel straight from continuous sources, with a legend chip at
 the top of the field. It pauses, with a note, while walls exist (since
 0.1.0-prototype.19).
 
+実験 → 重ね合わせ（波源1＋波源2） opens a separate mode (since
+0.1.0-prototype.20). A switch at the top of the field shows 合成 / 波源1だけ /
+波源2だけ. Colours are fixed across the mode: 波源1 red, 波源2 blue, 合成
+black. Crest/trough lines, source markers and the extra graph lines all use
+them. The tool row is replaced by 波源1を動かす, 波源2を動かす, 観測点 and 断面;
+walls, slits and pulses are not offered because they would break the
+"合成 = 波源1 + 波源2" picture. 終わる keeps both sources as ordinary sources.
+
+Damping (減衰 なし/弱/中/強) is in the superposition panel and in その他.
+
+On stacked (portrait) layouts the sheet area is capped at 42dvh and scrolls,
+so several panels never squeeze the wave field away.
+
 Panels (observation results, Doppler, cross-section, source settings) sit between the field and the
 tool dock. They never cover the field; the field shrinks to fit instead.
 Escape closes open panels and menus.

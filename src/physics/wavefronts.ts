@@ -16,6 +16,8 @@ export interface WavefrontEvent {
   column: number;
   row: number;
   crest: boolean;
+  // Index in the continuous-source list (0 = 波源1); -1 for the moving source.
+  sourceIndex: number;
 }
 
 export interface WavefrontCircle {
@@ -23,6 +25,7 @@ export interface WavefrontCircle {
   row: number;
   radius: number;
   crest: boolean;
+  sourceIndex: number;
 }
 
 // Finds crests (effective phase pi/2) and troughs (3 pi/2) that a source emits
@@ -65,7 +68,13 @@ export function wavefrontCircles(
     const radius = waveSpeedCellsPerSecond * (nowSeconds - event.emittedAt);
 
     if (radius >= minimumRadius) {
-      circles.push({ column: event.column, row: event.row, radius, crest: event.crest });
+      circles.push({
+        column: event.column,
+        row: event.row,
+        radius,
+        crest: event.crest,
+        sourceIndex: event.sourceIndex,
+      });
     }
   }
 

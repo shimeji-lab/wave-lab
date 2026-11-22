@@ -24,6 +24,7 @@ function scene(sourceCount: number): SceneSnapshot {
     observer: undefined,
     sectionLine: undefined,
     movingSource: undefined,
+    superposition: false,
   };
 }
 

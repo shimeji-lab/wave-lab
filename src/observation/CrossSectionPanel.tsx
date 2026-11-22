@@ -16,6 +16,8 @@ interface CrossSectionPanelProps {
   absorptionLayerCells: number;
   line: SectionLine;
   graphScale: GraphScale;
+  // Superposition mode: also draw 波源1 alone (red) and 波源2 alone (blue).
+  showComponents?: boolean;
   onCycleGraphScale: () => void;
   onRemove: () => void;
 }
@@ -25,10 +27,13 @@ export function CrossSectionPanel({
   absorptionLayerCells,
   line,
   graphScale,
+  showComponents = false,
   onCycleGraphScale,
   onRemove,
 }: CrossSectionPanelProps) {
   const polylineReference = useRef<SVGPolylineElement>(null);
+  const firstComponentReference = useRef<SVGPolylineElement>(null);
+  const secondComponentReference = useRef<SVGPolylineElement>(null);
 
   useEffect(() => {
     let animationFrameId = 0;
@@ -43,6 +48,20 @@ export function CrossSectionPanel({
         const domain = createVisibleDomain(frame, absorptionLayerCells);
         const values = extractCrossSection(frame.field, frame.columns, line, domain);
         polylineReference.current.setAttribute("points", createCrossSectionPoints(values, undefined, undefined, graphScale));
+        [firstComponentReference.current, secondComponentReference.current].forEach((element, part) => {
+          const component = frame.components?.[part];
+          element?.setAttribute(
+            "points",
+            component === undefined
+              ? ""
+              : createCrossSectionPoints(
+                  extractCrossSection(component, frame.columns, line, domain),
+                  undefined,
+                  undefined,
+                  graphScale,
+                ),
+          );
+        });
         lastFrame = frame;
       }
     };
@@ -56,7 +75,7 @@ export function CrossSectionPanel({
     drawLatest();
     animationFrameId = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [absorptionLayerCells, frameReference, graphScale, line]);
+  }, [absorptionLayerCells, frameReference, graphScale, line, showComponents]);
 
   const horizontal = line.orientation === "horizontal";
   const centerY = crossSectionGraphHeight / 2;
@@ -79,7 +98,17 @@ export function CrossSectionPanel({
         aria-label={`${horizontal ? "横" : "縦"}の線にそった波の高さ`}
       >
         <line x1="0" y1={centerY} x2={crossSectionGraphWidth} y2={centerY} className="waveform-zero" />
-        <polyline ref={polylineReference} className="cross-section-line" points="" />
+        {showComponents ? (
+          <>
+            <polyline ref={firstComponentReference} className="component-line tone-0" points="" />
+            <polyline ref={secondComponentReference} className="component-line tone-1" points="" />
+          </>
+        ) : null}
+        <polyline
+          ref={polylineReference}
+          className={showComponents ? "cross-section-line sum-line" : "cross-section-line"}
+          points=""
+        />
       </svg>
       <GraphScaleButton scale={graphScale} onCycle={onCycleGraphScale} />
       </div>

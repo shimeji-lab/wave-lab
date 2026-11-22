@@ -2,8 +2,15 @@ import { createSingleSlitBoundaryCells } from "../physics/boundaries";
 import type { BoundaryCell } from "../physics/solver";
 import type { ContinuousSourceConfig } from "../simulation/types";
 import type { MovingSourceConfig } from "../physics/movingSource";
+import type { SectionLine } from "../observation/crossSection";
 
-export type ExperimentPresetId = "pulse" | "interference" | "reflection" | "diffraction" | "doppler";
+export type ExperimentPresetId =
+  | "pulse"
+  | "interference"
+  | "superposition"
+  | "reflection"
+  | "diffraction"
+  | "doppler";
 
 export interface ExperimentPreset {
   id: ExperimentPresetId;
@@ -23,7 +30,10 @@ export interface ExperimentPresetSetup {
   sources: ContinuousSourceConfig[];
   pulse?: { column: number; row: number; amplitude: number };
   movingSource?: MovingSourceConfig;
-  interactionMode: "pulse" | "sourceSelect";
+  // Superposition mode: show 波源1, 波源2 and their sum separately.
+  superposition?: boolean;
+  sectionLine?: SectionLine;
+  interactionMode: "pulse" | "sourceSelect" | "observer";
 }
 
 export const experimentPresets: readonly ExperimentPreset[] = [
@@ -38,6 +48,12 @@ export const experimentPresets: readonly ExperimentPreset[] = [
     title: "二波源干渉",
     goal: "二つの波が重なると、強まる場所と弱まる場所ができる。",
     prompt: "色が強い場所と、ほとんど動かない場所を探そう。",
+  },
+  {
+    id: "superposition",
+    title: "重ね合わせ（波源1＋波源2）",
+    goal: "二つの波を足し合わせたものが、実際に見える波になる。",
+    prompt: "波源1だけ・波源2だけ・合成を切り替えて、どこで強め合うか見よう。",
   },
   {
     id: "reflection",
@@ -89,6 +105,26 @@ export function createExperimentPreset(
         ],
         interactionMode: "sourceSelect",
       };
+    case "superposition": {
+      const bandHeight = visibleBounds.bottom - visibleBounds.top;
+
+      return {
+        boundaryCells: [],
+        sources: [
+          createSource("superposition-1", Math.round(visibleBounds.left + visibleWidth * 0.42), centerRow),
+          createSource("superposition-2", Math.round(visibleBounds.left + visibleWidth * 0.58), centerRow),
+        ],
+        superposition: true,
+        // A horizontal line below the sources crosses the bright and still
+        // stripes, like a screen in front of two slits.
+        sectionLine: {
+          orientation: "horizontal",
+          column: Math.round(visibleBounds.left + visibleWidth / 2),
+          row: Math.round(centerRow + bandHeight * 0.3),
+        },
+        interactionMode: "observer",
+      };
+    }
     case "reflection":
       return {
         boundaryCells: createVerticalWall(

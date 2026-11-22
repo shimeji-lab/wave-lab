@@ -14,6 +14,7 @@ export interface SceneSnapshot {
   observer: { column: number; row: number } | undefined;
   sectionLine: SectionLine | undefined;
   movingSource: MovingSourceConfig | undefined;
+  superposition: boolean;
 }
 
 export interface EditHistory {

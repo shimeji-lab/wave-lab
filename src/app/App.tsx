@@ -11,9 +11,17 @@ import { defaultGraphScale, nextGraphScale, type GraphScale } from "../observati
 import type { MovingSourceConfig } from "../physics/movingSource";
 import type { SectionLine, SectionOrientation } from "../observation/crossSection";
 import { ObservationPanel } from "../observation/ObservationPanel";
+import { SuperpositionPanel } from "../observation/SuperpositionPanel";
+import {
+  dampingLevels,
+  dampingPerSecondFor,
+  defaultDampingLevelId,
+  nextDampingLevelId,
+  type DampingLevelId,
+} from "../physics/damping";
 import { createSingleSlitBoundaryCells } from "../physics/boundaries";
 import type { BoundaryCell, SolverConfig } from "../physics/solver";
-import { WaveCanvas } from "../renderer/WaveCanvas";
+import { WaveCanvas, type SuperpositionView } from "../renderer/WaveCanvas";
 import { appVersion } from "../shared/version";
 import { DiagnosticsPanel, type ViewportDiagnostic } from "../ui/DiagnosticsPanel";
 import { ExperimentGallery } from "../ui/ExperimentGallery";
@@ -44,10 +52,20 @@ type InteractionMode =
   | "wall"
   | "slit"
   | "erase"
-  | "section";
+  | "section"
+  | "placeSource1"
+  | "placeSource2";
 // "壁を消す" (erase) lives inside the wall tool as a draw/erase switch so the
 // tool row keeps six entries on narrow phones.
-type Tool = "pulse" | "source" | "observer" | "section" | "wall" | "slit";
+type Tool =
+  | "pulse"
+  | "source"
+  | "observer"
+  | "section"
+  | "wall"
+  | "slit"
+  | "placeSource1"
+  | "placeSource2";
 
 const tools: Array<{ tool: Tool; label: string; icon: IconName }> = [
   { tool: "pulse", label: "波を起こす", icon: "pulse" },
@@ -56,6 +74,19 @@ const tools: Array<{ tool: Tool; label: string; icon: IconName }> = [
   { tool: "section", label: "断面", icon: "section" },
   { tool: "wall", label: "壁", icon: "wall" },
   { tool: "slit", label: "スリット", icon: "slit" },
+];
+// Superposition mode has its own, shorter tool row: walls, slits and pulses
+// would break the "合成 = 波源1 + 波源2" picture this mode is about.
+const superpositionTools: Array<{ tool: Tool; label: string; icon: IconName }> = [
+  { tool: "placeSource1", label: "波源1を動かす", icon: "source" },
+  { tool: "placeSource2", label: "波源2を動かす", icon: "source" },
+  { tool: "observer", label: "観測点", icon: "observer" },
+  { tool: "section", label: "断面", icon: "section" },
+];
+const superpositionViews: Array<{ view: SuperpositionView; label: string }> = [
+  { view: "sum", label: "合成" },
+  { view: 0, label: "波源1だけ" },
+  { view: 1, label: "波源2だけ" },
 ];
 const slitWidths = [12, 24, 36, 48];
 
@@ -95,6 +126,9 @@ export function App() {
   const [movingSource, setMovingSource] = useState<MovingSourceConfig>();
   const [graphScale, setGraphScale] = useState<GraphScale>(defaultGraphScale);
   const [wavefrontsRequested, setWavefrontsRequested] = useState(false);
+  const [superpositionActive, setSuperpositionActive] = useState(false);
+  const [superpositionView, setSuperpositionView] = useState<SuperpositionView>("sum");
+  const [dampingLevelId, setDampingLevelId] = useState<DampingLevelId>(defaultDampingLevelId);
   const cycleGraphScale = () => setGraphScale(nextGraphScale);
   const [sectionOrientation, setSectionOrientation] = useState<SectionOrientation>("horizontal");
   const [editHistory, setEditHistory] = useState(createEditHistory);
@@ -171,6 +205,7 @@ export function App() {
     observer,
     sectionLine,
     movingSource,
+    superposition: superpositionActive,
   });
 
   // Called immediately before a learner-visible placement change so that
@@ -220,6 +255,16 @@ export function App() {
 
     if (scene.sectionLine !== undefined) {
       setSectionOrientation(scene.sectionLine.orientation);
+    }
+
+    if (scene.superposition !== superpositionActive) {
+      controller?.setSuperposition(scene.superposition);
+      setSuperpositionActive(scene.superposition);
+      setSuperpositionView("sum");
+
+      if (!scene.superposition && (interactionMode === "placeSource1" || interactionMode === "placeSource2")) {
+        setInteractionMode("sourceSelect");
+      }
     }
   };
 
@@ -278,6 +323,10 @@ export function App() {
     controllerReference.current?.setWavefronts(wavefrontsVisible);
   }, [wavefrontsVisible]);
 
+  useEffect(() => {
+    controllerReference.current?.setDamping(dampingPerSecondFor(dampingLevelId));
+  }, [dampingLevelId]);
+
   const handlePlayPause = () => {
     if (simulationStatus === "running") {
       controllerReference.current?.pause();
@@ -301,6 +350,8 @@ export function App() {
     setObserver(undefined);
     setSectionLine(undefined);
     setMovingSource(undefined);
+    setSuperpositionActive(false);
+    setSuperpositionView("sum");
     pendingObservationSamplesReference.current = [];
     setObservationSamples([]);
     setObservationPanelOpen(false);
@@ -353,6 +404,22 @@ export function App() {
     if (interactionMode === "section") {
       commitEdit();
       setSectionLine({ orientation: sectionOrientation, column, row });
+      return;
+    }
+
+    if (interactionMode === "placeSource1" || interactionMode === "placeSource2") {
+      const sourceIndex = interactionMode === "placeSource1" ? 0 : 1;
+
+      if (continuousSources[sourceIndex] === undefined) {
+        return;
+      }
+
+      commitEdit();
+      const nextSources = continuousSources.map((source, index) =>
+        index === sourceIndex ? { ...source, column, row } : source,
+      );
+      setContinuousSources(nextSources);
+      controllerReference.current?.setContinuousSources(nextSources);
       return;
     }
 
@@ -493,7 +560,20 @@ export function App() {
     setSelectedSourceId(undefined);
     setContinuousSourceEnabled(preset.sources.length > 0);
     setObserver(undefined);
-    setSectionLine(undefined);
+    setSectionLine(preset.sectionLine);
+
+    if (preset.sectionLine !== undefined) {
+      setSectionOrientation(preset.sectionLine.orientation);
+    }
+
+    setSuperpositionActive(preset.superposition === true);
+    setSuperpositionView("sum");
+
+    if (preset.superposition === true) {
+      // The coloured crest/trough lines are the point of this mode.
+      setWavefrontsRequested(true);
+    }
+
     setMovingSource(undefined);
     pendingObservationSamplesReference.current = [];
     setObservationSamples([]);
@@ -509,6 +589,11 @@ export function App() {
     controllerReference.current?.setContinuousSources(preset.sources);
     controllerReference.current?.setContinuousSource(preset.sources.length > 0);
     controllerReference.current?.setSpeed(1);
+
+    if (preset.superposition === true) {
+      controllerReference.current?.setSuperposition(true);
+    }
+
     setMovingSource(preset.movingSource);
     controllerReference.current?.setMovingSource(preset.movingSource);
 
@@ -589,6 +674,16 @@ export function App() {
     controllerReference.current?.setMovingSource(undefined);
   };
 
+  // Leaving superposition mode keeps both sources as ordinary sources.
+  const exitSuperposition = () => {
+    commitEdit();
+    controllerReference.current?.setSuperposition(false);
+    setSuperpositionActive(false);
+    setSuperpositionView("sum");
+    setSelectedSourceId(undefined);
+    setInteractionMode("sourceSelect");
+  };
+
   const changeSectionOrientation = (orientation: SectionOrientation) => {
     setSectionOrientation(orientation);
 
@@ -598,6 +693,10 @@ export function App() {
     }
   };
   const canUndo = editHistory.entries.length > 0;
+  const visibleTools = superpositionActive ? superpositionTools : tools;
+  const placedSourceIndex =
+    interactionMode === "placeSource1" ? 0 : interactionMode === "placeSource2" ? 1 : undefined;
+  const dampingLabel = dampingLevels.find((level) => level.id === dampingLevelId)?.label ?? "";
   const selectedSourceNumber =
     selectedSource === undefined ? 0 : continuousSources.indexOf(selectedSource) + 1;
 
@@ -607,6 +706,7 @@ export function App() {
         "app-shell",
         selectedSource === undefined ? "" : "source-settings-open",
         observer === undefined ? "" : "has-observer",
+        superpositionActive ? "superposition" : "",
       ].filter(Boolean).join(" ")}
     >
       <header className="app-header">
@@ -639,13 +739,31 @@ export function App() {
             sectionLine={sectionLine}
             movingSourceActive={movingSource !== undefined}
             showWavefronts={wavefrontsVisible}
+            superpositionView={superpositionActive ? superpositionView : undefined}
             boundaryCells={boundaryCells}
             interactionMode={interactionMode}
             onFieldTap={handleFieldTap}
             onBoundaryStroke={handleBoundaryStroke}
             onRenderFramesPerSecond={setRenderFramesPerSecond}
           />
-          {wavefrontsRequested ? (
+          {superpositionActive ? (
+            <div className="superposition-view-switch segmented" role="group" aria-label="表示する波">
+              {superpositionViews.map(({ view, label }) => (
+                <button
+                  key={label}
+                  type="button"
+                  className={[
+                    superpositionView === view ? "selected" : "",
+                    view === "sum" ? "view-sum" : `view-tone-${view}`,
+                  ].filter(Boolean).join(" ")}
+                  aria-pressed={superpositionView === view}
+                  onClick={() => setSuperpositionView(view)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          ) : wavefrontsRequested ? (
             <p className="wavefront-legend">
               {wavefrontsVisible ? (
                 <>
@@ -676,11 +794,21 @@ export function App() {
         {observer === undefined &&
         selectedSource === undefined &&
         sectionLine === undefined &&
-        movingSource === undefined ? (
+        movingSource === undefined &&
+        !superpositionActive ? (
           <p className="sheet-placeholder">
             観測点を置くと、ここに波の高さのグラフが出ます。波源をタップすると、ここで設定できます。
           </p>
         ) : null}
+        {!superpositionActive || selectedSource !== undefined ? null : (
+          <SuperpositionPanel
+            dampingLevelId={dampingLevelId}
+            wavefrontsShown={wavefrontsRequested}
+            onDampingChange={setDampingLevelId}
+            onToggleWavefronts={() => setWavefrontsRequested((requested) => !requested)}
+            onExit={exitSuperposition}
+          />
+        )}
         {observer === undefined || selectedSource !== undefined ? null : (
           <ObservationPanel
             open={observationPanelOpen}
@@ -712,6 +840,7 @@ export function App() {
             absorptionLayerCells={solverConfig.absorptionLayerCells}
             line={sectionLine}
             graphScale={graphScale}
+            showComponents={superpositionActive}
             onCycleGraphScale={cycleGraphScale}
             onRemove={() => {
               commitEdit();
@@ -729,7 +858,7 @@ export function App() {
             visibleInsetCells={solverConfig.absorptionLayerCells}
             waveSpeedCellsPerSecond={solverConfig.waveSpeedCellsPerSecond}
             onChange={updateContinuousSource}
-            onDelete={deleteContinuousSource}
+            onDelete={superpositionActive ? undefined : deleteContinuousSource}
             onClose={() => {
               setSelectedSourceId(undefined);
               setEditHistory(breakEditMerge);
@@ -744,6 +873,15 @@ export function App() {
             {fieldTitleForMode(interactionMode)}
           </h2>
           <div className="context-actions">
+            {placedSourceIndex !== undefined && continuousSources[placedSourceIndex] !== undefined ? (
+              <button
+                type="button"
+                className="chip-control"
+                onClick={() => setSelectedSourceId(continuousSources[placedSourceIndex].id)}
+              >
+                波源{placedSourceIndex + 1}の設定（波長・位相）
+              </button>
+            ) : null}
             {activeTool === "source" && continuousSources.length > 0 ? (
               <button type="button" className="chip-control" onClick={handleContinuousSource} disabled={controlsDisabled}>
                 {continuousSourceEnabled ? "連続波を止める" : "連続波を出す"}
@@ -818,12 +956,16 @@ export function App() {
           </div>
         </div>
 
-        <nav className="tool-row" aria-label="道具">
-          {tools.map(({ tool, label, icon }) => (
+        <nav className={superpositionActive ? "tool-row four" : "tool-row"} aria-label="道具">
+          {visibleTools.map(({ tool, label, icon }) => (
             <button
               key={tool}
               type="button"
-              className={activeTool === tool ? "tool-button active" : "tool-button"}
+              className={[
+                "tool-button",
+                activeTool === tool ? "active" : "",
+                tool === "placeSource1" ? "tone-0" : tool === "placeSource2" ? "tone-1" : "",
+              ].filter(Boolean).join(" ")}
               aria-pressed={activeTool === tool}
               onClick={() => selectTool(tool)}
             >
@@ -889,6 +1031,14 @@ export function App() {
             >
               <Icon name="pulse" />
               {wavefrontsRequested ? "波面の線を消す" : "波面の線（山＝実線・谷＝破線）"}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => setDampingLevelId(nextDampingLevelId)}
+            >
+              <Icon name="pulse" />
+              減衰：{dampingLabel}（押すと なし→弱→中→強）
             </button>
             <button
               type="button"
@@ -966,6 +1116,10 @@ function fieldTitleForMode(mode: InteractionMode): string {
       return "なぞった所の壁を消す";
     case "section":
       return "タップした所を通る線で、波を横から見る";
+    case "placeSource1":
+      return "タップした所へ波源1を動かす";
+    case "placeSource2":
+      return "タップした所へ波源2を動かす";
   }
 }
 

@@ -22,6 +22,17 @@ describe("experiment presets", () => {
     expect(preset.interactionMode).toBe("sourceSelect");
   });
 
+  it("starts superposition mode with two sources and a section line below them", () => {
+    const preset = createExperimentPreset("superposition", grid);
+
+    expect(preset.superposition).toBe(true);
+    expect(preset.sources).toHaveLength(2);
+    expect(preset.boundaryCells).toEqual([]);
+    expect(preset.sectionLine?.orientation).toBe("horizontal");
+    expect(preset.sectionLine?.row ?? 0).toBeGreaterThan(preset.sources[0].row);
+    expect(preset.sectionLine?.row ?? 0).toBeLessThan(grid.rows - grid.visibleInsetCells);
+  });
+
   it("places a fixed wall in front of the reflection pulse", () => {
     const preset = createExperimentPreset("reflection", grid);
 

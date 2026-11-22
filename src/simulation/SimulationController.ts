@@ -16,6 +16,8 @@ export interface SimulationFrame {
   movingSourcePosition?: { column: number; row: number };
   movingSourceSecondsSinceRestart?: number;
   wavefronts?: WavefrontCircle[];
+  // Superposition mode only: 波源1 alone and 波源2 alone. field = sum of both.
+  components?: [Float32Array, Float32Array];
 }
 
 export interface SimulationControllerCallbacks {
@@ -36,6 +38,7 @@ export interface ObservationSample {
   row: number;
   simulationTimeSeconds: number;
   displacement: number;
+  components?: [number, number];
 }
 
 export class SimulationController {
@@ -93,6 +96,14 @@ export class SimulationController {
     this.send({ version: workerProtocolVersion, type: "SET_WAVEFRONTS", enabled });
   }
 
+  public setSuperposition(enabled: boolean): void {
+    this.send({ version: workerProtocolVersion, type: "SET_SUPERPOSITION", enabled });
+  }
+
+  public setDamping(dampingPerSecond: number): void {
+    this.send({ version: workerProtocolVersion, type: "SET_DAMPING", dampingPerSecond });
+  }
+
   public clearObserver(): void {
     this.send({ version: workerProtocolVersion, type: "CLEAR_OBSERVER" });
   }
@@ -139,6 +150,13 @@ export class SimulationController {
           movingSourcePosition: event.movingSourcePosition,
           movingSourceSecondsSinceRestart: event.movingSourceSecondsSinceRestart,
           wavefronts: event.wavefronts,
+          components:
+            event.componentBuffers === undefined
+              ? undefined
+              : [
+                  new Float32Array(event.componentBuffers[0]),
+                  new Float32Array(event.componentBuffers[1]),
+                ],
         });
         return;
       case "WARNING":
@@ -157,6 +175,7 @@ export class SimulationController {
           row: event.row,
           simulationTimeSeconds: event.simulationTimeSeconds,
           displacement: event.displacement,
+          components: event.components,
         });
         return;
     }

@@ -72,6 +72,7 @@ describe("wavefront overlay validation", () => {
           column: movingSourceAxisPosition(source, crossing.time, 1),
           row: source.lane,
           crest: crossing.crest,
+          sourceIndex: -1,
         });
       }
 
