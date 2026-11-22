@@ -84,6 +84,10 @@ the longer side of the field. Its panel offers four speeds (0.3, 0.6, 0.9 and
 1.3 times the wave speed), a cross-section along the path with the source
 position marked, and measured versus textbook wavelengths ahead and behind.
 
+Trough circles use pathLength-based dashes whose count doubles as the circle
+grows, so the dash pattern never slides around the circle (since
+0.1.0-prototype.21).
+
 Every graph has a "縦軸 ±3" button that cycles the shared vertical range
 through ±1, ±3, ±6 and ±12 (since 0.1.0-prototype.18).
 

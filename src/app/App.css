@@ -261,16 +261,23 @@ h1 {
 }
 
 /* Theoretical wavefronts: crest = solid, trough = dashed (textbook style). */
+/* Widths are in screen pixels via --wavefront-pixel (grid cells per pixel,
+   set by WaveCanvas). non-scaling-stroke is not used here because it breaks
+   the pathLength-based dashes that keep trough circles from spinning. */
+.field-marker-overlay .wavefront-layer circle {
+  vector-effect: none;
+}
+
 .wavefront-crest,
 .wavefront-trough {
   fill: none;
   stroke: #0f172a;
-  stroke-width: 1.6;
-  vector-effect: non-scaling-stroke;
+  stroke-width: calc(1.6 * var(--wavefront-pixel, 0.4));
 }
 
 .wavefront-trough {
-  stroke-dasharray: 5 4;
+  /* In pathLength units (see troughDashCount in WaveCanvas.tsx). */
+  stroke-dasharray: 1.2 0.8;
   opacity: 0.85;
 }
 
@@ -315,19 +322,19 @@ h1 {
 
 .wavefront-halo {
   stroke: rgb(255 255 255 / 85%);
-  stroke-width: 3.6;
+  stroke-width: calc(3.6 * var(--wavefront-pixel, 0.4));
   opacity: 1;
 }
 
 .wavefront-tone-0 {
   stroke: #e11d48;
-  stroke-width: 1.8;
+  stroke-width: calc(1.8 * var(--wavefront-pixel, 0.4));
   opacity: 1;
 }
 
 .wavefront-tone-1 {
   stroke: #1d4ed8;
-  stroke-width: 1.8;
+  stroke-width: calc(1.8 * var(--wavefront-pixel, 0.4));
   opacity: 1;
 }
 

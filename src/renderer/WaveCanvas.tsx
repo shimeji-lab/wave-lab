@@ -128,13 +128,26 @@ export function WaveCanvas({
         // Theoretical wavefront circles arrive with each frame. Writing the
         // markup directly keeps dozens of circles cheap at frame rate.
         if (wavefrontLayerReference.current !== null) {
+          // The circles are drawn in grid units (no non-scaling-stroke, which
+          // would distort pathLength-based dashes), so pass the size of one
+          // screen pixel in grid units to keep line widths in pixels.
+          const overlayWidth =
+            wavefrontLayerReference.current.ownerSVGElement?.getBoundingClientRect().width ?? 0;
+
+          if (overlayWidth > 0) {
+            wavefrontLayerReference.current.style.setProperty(
+              "--wavefront-pixel",
+              (domain.columns / overlayWidth).toFixed(4),
+            );
+          }
+
           wavefrontLayerReference.current.innerHTML = (frame.wavefronts ?? [])
             .filter(
               (circle) =>
                 typeof superpositionView !== "number" || circle.sourceIndex === superpositionView,
             )
             .map((circle) => {
-              const geometry = `cx="${(circle.column + 0.5).toFixed(2)}" cy="${(circle.row + 0.5).toFixed(2)}" r="${circle.radius.toFixed(2)}"`;
+              const geometry = `cx="${(circle.column + 0.5).toFixed(2)}" cy="${(circle.row + 0.5).toFixed(2)}" r="${circle.radius.toFixed(2)}"${circle.crest ? "" : ` pathLength="${troughPathLength(circle.radius)}"`}`;
               const kind = circle.crest ? "wavefront-crest" : "wavefront-trough";
 
               if (superpositionView === undefined) {
@@ -351,6 +364,22 @@ export function WaveCanvas({
       </div>
     </div>
   );
+}
+
+// A dashed circle that grows with a fixed dash length makes its dashes slide
+// around the circle, which looks like spinning. Instead the dash pattern is
+// tied to the circle itself with pathLength: the CSS dash pattern "1 1" then
+// means a fixed number of dashes at fixed angles. The count doubles as the
+// circle grows (every old dash splits in two), so dashes keep a similar size
+// and never rotate.
+export function troughDashCount(radiusCells: number): number {
+  const targetPeriodCells = 6;
+  const ideal = (2 * Math.PI * Math.max(radiusCells, 1)) / targetPeriodCells;
+  return Math.max(8, 2 ** Math.round(Math.log2(ideal)));
+}
+
+function troughPathLength(radiusCells: number): number {
+  return troughDashCount(radiusCells) * 2;
 }
 
 function drawStrokePreview(
